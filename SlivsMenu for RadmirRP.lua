@@ -45,6 +45,7 @@ local main_window_state = imgui.ImBool(false)
 		local fishing_bot = imgui.ImBool(false)
 		local fishing_bot_key = imgui.ImBool(false)
 		local fishing_spamAlt_thread_stop = false
+		local fishing_bot_tunecOff = imgui.ImBool(false)
 		local legit_whohota = imgui.ImBool(false)
 		local legit_whDuck = imgui.ImBool(false)
 		local legit_whDuck_traser = imgui.ImBool(false)
@@ -93,13 +94,13 @@ local dlstatus = require('moonloader').download_status
 
 update_state = false
 
-local script_vers = 145
-local script_vers_text = "1.45"
+local script_vers = 146
+local script_vers_text = "1.46"
 
 local update_url = "https://github.com/Lomtik655/SlivsMenu_for_RadmirRP/raw/refs/heads/main/update.ini"
 local update_path = getWorkingDirectory() .. "/radmirSlivsMenu.ini"
 
-local script_url = "https://github.com/Lomtik655/SlivsMenu_for_RadmirRP/raw/refs/heads/main/SlivsMenu%20for%20RadmirRP.luac"
+local script_url = "https://github.com/Lomtik655/SlivsMenu_for_RadmirRP/raw/refs/heads/main/SlivsMenu%20for%20RadmirRP.lua"
 local script_path = thisScript().path
 
 -- Functions
@@ -582,6 +583,7 @@ function imgui.OnDrawFrame()
 			end
 		end
 		if imgui.Checkbox(u8'Активация Бот рыбалка на B', fishing_bot_key) then end
+		if imgui.Checkbox(u8'Выключить Тунца', fishing_bot_tunecOff) then end
 
 		imgui.End()
 	end
@@ -849,7 +851,7 @@ function onReceivePacket(id, bs)
 			bitstreamtext = nil
 		end
 		if _style and _type and l and style3 and length and bitstreamtext then
-			--print('pc: '.._style..'/'.._type..'/'..l..'/'..style3..'/'..length..'/'..bitstreamtext)
+			print('pc: '.._style..'/'.._type..'/'..l..'/'..style3..'/'..length..'/'..bitstreamtext)
 			if fishing_bot.v then
 				--print('bot: '.._style..'/'.._type..'/'..l..'/'..style3..'/'..length..'/'..bitstreamtext)
 				if (_style == 727) and (_type == 512) and (l == 0) and (style3 == 1) and (length == 64) then
@@ -864,8 +866,20 @@ function onReceivePacket(id, bs)
 					end
 				end
 				if string.find(bitstreamtext, 'Вы хотите забрать или отпустить рыбу?', 1, true) then
-					lua_thread.create(
-						function()
+					--727/512/0/1/195/window.addDialogInQueue('[0,6,"Улов","","Забрать","Отпустить",0,0]', ["Вы поймали Красноперка весом 0.2 кг.<n><n>Вы хотите забрать или отпустить рыбу?", "fishing/fish/-1.png"], 0)
+					if fishing_bot_tunecOff.v and string.find(bitstreamtext, 'Тунец', 1, true) then
+						lua_thread.create(
+							function()
+								wait(500)
+								setVirtualKeyDown(VK_ESCAPE, true)
+								wait(100)
+								setVirtualKeyDown(VK_ESCAPE, false)
+								wait(3500)
+								fishing_spamAlt_thread:run()
+						end)
+					else
+						lua_thread.create(
+							function()
 								wait(500)
 								setVirtualKeyDown(VK_RETURN, true)
 								wait(100)
@@ -876,7 +890,8 @@ function onReceivePacket(id, bs)
 								setVirtualKeyDown(VK_RETURN, false)
 								wait(3500)
 								fishing_spamAlt_thread:run()
-					end)
+						end)
+					end
 				end
 				if string.find(bitstreamtext, 'fishing/sfx_fishing_swish.ogg', 1, true) and (not fishing_spamAlt_thread.dead) then
 					fishing_spamAlt_thread_stop = true
