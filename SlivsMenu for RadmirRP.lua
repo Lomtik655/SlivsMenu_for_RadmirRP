@@ -52,7 +52,6 @@ local main_window_state = imgui.ImBool(false)
 		local legit_AutoTakeDuck = imgui.ImBool(false)
 		local legit_aimDuck = imgui.ImBool(false)
 		local legit_aimDuck_silent = imgui.ImBool(false)
-		local legit_Antishtraf = imgui.ImBool(false)
 
 		--Угон машин, гм
 		local fun_ygonAvto = imgui.ImBool(false)
@@ -72,20 +71,16 @@ local main_window_state = imgui.ImBool(false)
 	local menu_HeadFuncText_size = nil
 	local menu_buttonCheatText_size = nil
 
-local config = inicfg.load({
-	AutoLogin =
-	{
-		AutoLoginStatus=false,
-		Password="pass"
-	},
-	Other =
-	{
-		Antishtraf=false
-	}
-})
 -- Авто-логин
 local autologin_window_state = imgui.ImBool(false)
 local autologin_buffer = imgui.ImBuffer(256)
+local config = inicfg.load({
+  AutoLogin =
+  {
+	AutoLoginStatus=false,
+	Password="pass"
+  }
+})
 local AutoLoginStatus = imgui.ImBool(false)
 if (config.AutoLogin.AutoLoginStatus == false) then
 	AutoLoginStatus.v = false
@@ -93,20 +88,14 @@ else
 	AutoLoginStatus.v = true
 end
 autologin_buffer.v = tostring(config.AutoLogin.Password)
---Анти-штрафы
-if (config.Other.Antishtraf == false) then
-	legit_Antishtraf.v = false
-else
-	legit_Antishtraf.v = true
-end
 
 -- Update
 local dlstatus = require('moonloader').download_status
 
 update_state = false
 
-local script_vers = 147
-local script_vers_text = "1.47"
+local script_vers = 148
+local script_vers_text = "1.48"
 
 local update_url = "https://github.com/Lomtik655/SlivsMenu_for_RadmirRP/raw/refs/heads/main/update.ini"
 local update_path = getWorkingDirectory() .. "/radmirSlivsMenu.ini"
@@ -487,18 +476,6 @@ function imgui.OnDrawFrame()
 								autologin_window_state.v = true
 							end
 							
-							--Анти-штрафы
-							imgui.SetCursorPosX(25)
-							if imgui.Checkbox(u8'Анти-штрафы(Светофоры, полиц.радары)', legit_Antishtraf) then 
-								if legit_Antishtraf.v then
-									config.Other.Antishtraf = true
-									inicfg.save(config)
-								else
-									config.Other.Antishtraf = false
-									inicfg.save(config)
-								end
-							end
-							
 							imgui.EndChild()
 						end
 
@@ -640,6 +617,7 @@ function imgui.OnDrawFrame()
 
 		-- Вывод окна
 		imgui.Begin('SlivsMenu for RadmirRP - AutoLogin', autologin_window_state, imgui.WindowFlags.NoResize)
+		--Вх на оленей и медведей
 		if imgui.Checkbox(u8'Авто-Логин', AutoLoginStatus) then 
 			if AutoLoginStatus.v then
 				config.AutoLogin.AutoLoginStatus = true
@@ -873,7 +851,7 @@ function onReceivePacket(id, bs)
 			bitstreamtext = nil
 		end
 		if _style and _type and l and style3 and length and bitstreamtext then
-			--print('pc: '.._style..'/'.._type..'/'..l..'/'..style3..'/'..length..'/'..bitstreamtext)
+			print('pc: '.._style..'/'.._type..'/'..l..'/'..style3..'/'..length..'/'..bitstreamtext)
 			if fishing_bot.v then
 				--print('bot: '.._style..'/'.._type..'/'..l..'/'..style3..'/'..length..'/'..bitstreamtext)
 				if (_style == 727) and (_type == 512) and (l == 0) and (style3 == 1) and (length == 64) then
@@ -955,21 +933,6 @@ function onReceivePacket(id, bs)
 end
 function onSendPacket(id, bitStream, priority, reliability, orderingChannel)
     if fun_TpOnCoord_TPshim and not isCharInAnyCar(PLAYER_PED) then id = 159 return false end
-	--ЧOnPlayerEnterAread | 215, 2, 0, 0, 0, 0, 0, 17, 0, 0, 0, 79, 110, 80, 108, 97, 121, 101, 114, 69, 110, 116, 101, 114, 65, 114, 101, 97, 2, 0, 0, 0, 100, 5, 0, 0, 0
-	if (id == 215) and legit_Antishtraf.v then
-		raknetBitStreamReadInt8(bitStream)
-		local a = raknetBitStreamReadInt8(bitStream)
-		raknetBitStreamReadInt8(bitStream)
-		raknetBitStreamReadInt8(bitStream)
-		raknetBitStreamReadInt8(bitStream)
-		raknetBitStreamReadInt8(bitStream)
-		raknetBitStreamReadInt8(bitStream)
-		local b = raknetBitStreamReadInt8(bitStream)
-		
-		if (a == 2 and b == 17) then 
-			return false
-		end
-	end
 end
 
 -- Получение сообщений от сервера
