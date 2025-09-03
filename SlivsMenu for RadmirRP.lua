@@ -64,6 +64,14 @@ local main_window_state = imgui.ImBool(false)
 		local fun_TpOnCoord_tpWait = 1100
 		local fun_TpOnCoord_tpTime
 		local fun_teleport_window_state = imgui.ImBool(false)
+	--Боты
+		local ferma1TpPerenos = false
+		local ferma2TpPerenos = false
+		local fermaTpVspah = false
+
+		local fermaCheckpointPosX = 0.0
+		local fermaCheckpointPosY = 0.0
+		local fermaCheckpointPosZ = 0.0
 
 --размер шрифта
 	local headsize = nil
@@ -94,8 +102,8 @@ local dlstatus = require('moonloader').download_status
 
 update_state = false
 
-local script_vers = 148
-local script_vers_text = "1.48"
+local script_vers = 150
+local script_vers_text = "1.50"
 
 local update_url = "https://github.com/Lomtik655/SlivsMenu_for_RadmirRP/raw/refs/heads/main/update.ini"
 local update_path = getWorkingDirectory() .. "/radmirSlivsMenu.ini"
@@ -125,6 +133,15 @@ function main()
 		sampAddChatMessage("{00ff00}SlivsMenu {00b7ff}for RadmirRP {f5a207}by QQSliverQQ. {ffffff}Загружен!", -1)
 		sampAddChatMessage("Активация ---> {eefa05}/sm", -1)
 	end
+	
+	--Потоки
+		--thread = lua_thread.create_suspended(thread_func) | thread:run() - выполнить
+	fishing_spamAlt_thread = lua_thread.create_suspended(fishing_spamAlt_thread_function)
+	legit_autoTakeDuck_thread = lua_thread.create_suspended(legit_autoTakeDuck_thread_function)
+	ferma1TpPerenos_thread = lua_thread.create_suspended(ferma1TpPerenos_thread_function)
+    ferma2TpPerenos_thread = lua_thread.create_suspended(ferma2TpPerenos_thread_function)
+	fermaTpVspah_thread = lua_thread.create_suspended(fermaTpVspah_thread_function)
+	
 	-- Команды
 	sampRegisterChatCommand("sm", imgui_main_window_state)
 	sampRegisterChatCommand("rtp", function()
@@ -164,6 +181,39 @@ function main()
 		end
 	end)
 	
+	sampRegisterChatCommand("per1", function(arg)
+		ferma1TpPerenos = not ferma1TpPerenos
+		if ferma1TpPerenos then
+			sampAddChatMessage("Начинаем тепаться", -1)
+			ferma1TpPerenos_thread:run()
+		else
+			sampAddChatMessage("Дотепываемся последний раз", -1)
+		end
+	end)
+	sampRegisterChatCommand("per2", function(arg)
+		ferma2TpPerenos = not ferma2TpPerenos
+		if ferma2TpPerenos then
+			sampAddChatMessage("Начинаем тепаться", -1)
+			ferma2TpPerenos_thread:run()
+		else
+			sampAddChatMessage("Дотепываемся последний раз", -1)
+		end
+	end)
+	sampRegisterChatCommand("vspah", function(arg)
+		fermaTpVspah = not fermaTpVspah
+		if fermaTpVspah then
+			sampAddChatMessage("Начинаем тепаться", -1)
+			fermaTpVspah_thread:run()
+		else
+			sampAddChatMessage("Дотепываемся последний раз", -1)
+		end
+	end)
+	sampRegisterChatCommand("grab_metka", function(arg)
+		fun_TpOnCoord_syncPacketCount=0
+		fun_TpOnCoord_TPshim = true
+		moveTudaObratno(fermaCheckpointPosX, fermaCheckpointPosY, fermaCheckpointPosZ) -- тп на метку
+	end)
+	
 	--Фонты
 	font = renderCreateFont('Verdana', 10, 9)
 	font1 = renderCreateFont('Verdana', 6, 4)
@@ -171,11 +221,6 @@ function main()
 	fish_font_2 = renderCreateFont('Arial', 15, 8)
 	fish_font_warn = renderCreateFont('Arial', 35, 13)
 	font_whohota = renderCreateFont('Arial', 7, 13)
-
-	--Потоки
-		--thread = lua_thread.create_suspended(thread_func) | thread:run() - выполнить
-	fishing_spamAlt_thread = lua_thread.create_suspended(fishing_spamAlt_thread_function)
-	legit_autoTakeDuck_thread = lua_thread.create_suspended(legit_autoTakeDuck_thread_function)
 
 	imgui.Process = false
     while true do
@@ -851,7 +896,7 @@ function onReceivePacket(id, bs)
 			bitstreamtext = nil
 		end
 		if _style and _type and l and style3 and length and bitstreamtext then
-			print('pc: '.._style..'/'.._type..'/'..l..'/'..style3..'/'..length..'/'..bitstreamtext)
+			--print('pc: '.._style..'/'.._type..'/'..l..'/'..style3..'/'..length..'/'..bitstreamtext)
 			if fishing_bot.v then
 				--print('bot: '.._style..'/'.._type..'/'..l..'/'..style3..'/'..length..'/'..bitstreamtext)
 				if (_style == 727) and (_type == 512) and (l == 0) and (style3 == 1) and (length == 64) then
@@ -931,8 +976,14 @@ function onReceivePacket(id, bs)
 		end
 	end
 end
-function onSendPacket(id, bitStream, priority, reliability, orderingChannel)
-    if fun_TpOnCoord_TPshim and not isCharInAnyCar(PLAYER_PED) then id = 159 return false end
+--function onSendPacket(id, bitStream, priority, reliability, orderingChannel)
+--    if fun_TpOnCoord_TPshim and not isCharInAnyCar(PLAYER_PED) then id = 159 return false end
+--end
+
+function sampev.onSendPlayerSync(data)
+	if fun_TpOnCoord_TPshim and not isCharInAnyCar(PLAYER_PED) then
+		return false
+	end
 end
 
 -- Получение сообщений от сервера
@@ -1149,6 +1200,77 @@ function targetAtCoords(x, y, z)
     setCameraPositionUnfixed(az - fz, fx - ax)
 end
 
+function ferma1TpPerenos_thread_function()
+	while ferma1TpPerenos do
+		fun_TpOnCoord_syncPacketCount=0
+		fun_TpOnCoord_TPshim = true
+		moveTudaObratno(-1074.3, -1026.2, 47) -- тп на мельницу
+		while fun_TpOnCoord_TPshim do
+			wait(100)
+		end
+		
+		wait(5000)
+		
+		fun_TpOnCoord_syncPacketCount=0
+		fun_TpOnCoord_TPshim = true
+		moveTudaObratno(-1121.1, -828, 51) -- тп на сдачу
+		while fun_TpOnCoord_TPshim do
+			wait(100)
+		end
+		
+		wait(5000)
+	end
+	sampAddChatMessage("Доделали", -1)
+end
+
+function ferma2TpPerenos_thread_function()
+	while ferma2TpPerenos do
+		
+		fun_TpOnCoord_syncPacketCount=0
+		fun_TpOnCoord_TPshim = true
+		moveTudaObratno(1556.2, 651.4, 15) -- тп на мельницу
+		while fun_TpOnCoord_TPshim do
+			wait(100)
+		end
+		
+		wait(5000)
+		
+		fun_TpOnCoord_syncPacketCount=0
+		fun_TpOnCoord_TPshim = true
+		moveTudaObratno(1657.7, 692.3, 15.5) -- тп на сдачу
+		while fun_TpOnCoord_TPshim do
+			wait(100)
+		end
+		
+		wait(5000)
+	end
+	sampAddChatMessage("Доделали", -1)
+end
+
+function fermaTpVspah_thread_function()
+	while fermaTpVspah do
+	
+		fun_TpOnCoord_syncPacketCount=0
+		fun_TpOnCoord_TPshim = true
+		moveTudaObratno(fermaCheckpointPosX, fermaCheckpointPosY, fermaCheckpointPosZ) -- тп на метку
+		while fun_TpOnCoord_TPshim do
+			wait(100)
+		end
+		
+		wait(5000)
+	end
+	sampAddChatMessage("Доделали", -1)
+end
+
+function sampev.onSetCheckpoint(position, radius)
+	if (radius == 1) or (radius == 2.5) then
+		fermaCheckpointPosX = position.x
+		fermaCheckpointPosY = position.y
+		fermaCheckpointPosZ = position.z
+		--sampAddChatMessage(string.format("X:%0.3f |Y:%0.3f |Z:%0.3f", fermaCheckpointPosX, fermaCheckpointPosY, fermaCheckpointPosZ), -1)
+	end
+end
+
 --Телепорт атп/мтп
 function moveToBlip(blipX, blipY, blipZ)
 	local playerX, playerY, playerZ = getCharCoordinates(PLAYER_PED)
@@ -1157,7 +1279,7 @@ function moveToBlip(blipX, blipY, blipZ)
 	if isCar then
 		PosDelay = 5 --делей если в машине
 	else
-		PosDelay = 2 --делей если пешком
+		PosDelay = 1.45 --делей если пешком
 	end
 	lua_thread.create(function()
 		while fun_TpOnCoord_TPshim do
@@ -1166,28 +1288,85 @@ function moveToBlip(blipX, blipY, blipZ)
 				playerX, playerY, playerZ = playerX + moveX, playerY + moveY, playerZ + moveZ
 				
 				syncMovement(playerX, playerY, playerZ, isCar)
-				if not isCar then
-					setCharCoordinates(PLAYER_PED, playerX, playerY, playerZ)
-					wait(100)
-				end
 				fun_TpOnCoord_syncPacketCount=fun_TpOnCoord_syncPacketCount + 1
 				
 				if calculateDistance(playerX, playerY, blipX, blipY) < PosDelay then
 					local whatTime=os.clock()-fun_TpOnCoord_tpTime
 					setCharCoordinates(PLAYER_PED, blipX, blipY, blipZ)
-					wait(500)
+					wait(100)
 					fun_TpOnCoord_TPshim=false
 					sampAddChatMessage("{c300ff}ATP/MTP by L.team: {ffffff}Тепнули вас сер за " .. string.format("%0.2f", whatTime) .. " секунд", -1);
 					
 				end
 
-				if fun_TpOnCoord_syncPacketCount >= 480 then --OnPacket = 480
+				if fun_TpOnCoord_syncPacketCount >= 450 then --OnPacket = 480
 					fun_TpOnCoord_syncPacketCount=0
 					--sampAddChatMessage("Ждём " .. fun_TpOnCoord_tpWait .. "мс", -1)
 					if isCar then
 						wait(fun_TpOnCoord_tpWait)
+					else
+						wait(1600)
 					end
 				end
+			end)
+
+			if not success then
+				fun_TpOnCoord_TPshim=false
+			end
+		end
+	end)
+end
+function moveTudaObratno(blipX, blipY, blipZ)
+	local playerX, playerY, playerZ = getCharCoordinates(PLAYER_PED)
+	local myPosX, myPosY, myPosZ = getCharCoordinates(PLAYER_PED)
+	local isCar = isCharInAnyCar(PLAYER_PED)
+	local tuda = true
+	local PosDelay
+	if isCar then
+		PosDelay = 5 --делей если в машине
+	else
+		PosDelay = 1.45 --делей если пешком
+	end
+	lua_thread.create(function()
+		while fun_TpOnCoord_TPshim do
+			local success, err = pcall(function()
+				if tuda then
+					local moveX, moveY, moveZ = calculateNextStep(playerX, playerY, playerZ, blipX, blipY, blipZ, PosDelay)
+					playerX, playerY, playerZ = playerX + moveX, playerY + moveY, playerZ + moveZ
+					syncMovement(playerX, playerY, playerZ, isCar)
+				else
+					local moveX, moveY, moveZ = calculateNextStep(playerX, playerY, playerZ, myPosX, myPosY, myPosZ, PosDelay)
+					playerX, playerY, playerZ = playerX + moveX, playerY + moveY, playerZ + moveZ
+					syncMovement(playerX, playerY, playerZ, isCar)
+				end
+				
+				if calculateDistance(playerX, playerY, blipX, blipY) < PosDelay and tuda then
+					syncMovement(blipX, blipY, blipZ, isCar)
+					tuda = false
+				end
+				
+				if calculateDistance(playerX, playerY, myPosX, myPosY) < PosDelay and not tuda then
+					syncMovement(myPosX, myPosY, myPosZ, isCar)
+					--sampAddChatMessage(myPosX .. "|" .. myPosY .. "|" .. myPosZ, -1)
+					if isCar then
+						setCarCoordinates(getCarModel(storeCarCharIsInNoSave(PLAYER_PED)), myPosX, myPosY, myPosZ)
+					else
+						setCharCoordinates(PLAYER_PED, myPosX, myPosY, myPosZ-1)
+					end
+					wait(100)
+					fun_TpOnCoord_TPshim=false
+				end
+				
+				if fun_TpOnCoord_syncPacketCount >= 450 then --OnPacket = 480
+					fun_TpOnCoord_syncPacketCount=0
+					--sampAddChatMessage("Ждём " .. fun_TpOnCoord_tpWait .. "мс", -1)
+					if isCar then
+						wait(fun_TpOnCoord_tpWait)
+					else
+						wait(1600)
+					end
+				end
+				
 			end)
 
 			if not success then
@@ -1213,8 +1392,12 @@ function syncMovement(x, y, z, isCar)
 		data.send()
 	else
 		local data = samp_create_sync_data("player")
-		data.health = 0/0
 		data.position={x+randomizes, y+randomizes,z+randomizes}
+		data.health = 1/0
+		data.keysData = 0
+		data.specialAction = 4
+		data.animationId = 1018
+		data.animationFlags = 12211
 		data.send()
 	end
 end
