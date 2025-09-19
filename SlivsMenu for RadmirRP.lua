@@ -102,8 +102,8 @@ local dlstatus = require('moonloader').download_status
 
 update_state = false
 
-local script_vers = 150
-local script_vers_text = "1.50"
+local script_vers = 151
+local script_vers_text = "1.51"
 
 local update_url = "https://github.com/Lomtik655/SlivsMenu_for_RadmirRP/raw/refs/heads/main/update.ini"
 local update_path = getWorkingDirectory() .. "/radmirSlivsMenu.ini"
@@ -148,7 +148,7 @@ function main()
 		local x, y, z
 		--Ищем корды в памяти
 		modulehandle = getModuleHandle("clientside.dll")
-		fulladr = mem.getint32(modulehandle + 0x431110)
+		fulladr = mem.getint32(modulehandle + 0x431120)
 		ptr = '0x'.. string.format("%x", fulladr) --получили куда указывает указатель
 
 		x = mem.getfloat(ptr + 0x10) --добавили к найденной памяти указателя оффсет
@@ -392,6 +392,10 @@ function main()
 						end
 					end
 				end
+			end
+			
+			if fun_TpOnCoord_TPshim then
+				renderFontDrawText(font, "Teleporting", sw/2-15, sh/2+50, 0xFFFFFFFF)
 			end
 
         if not main_window_state.v then
@@ -1209,7 +1213,7 @@ function ferma1TpPerenos_thread_function()
 			wait(100)
 		end
 		
-		wait(5000)
+		wait(math.random(5000, 7500))
 		
 		fun_TpOnCoord_syncPacketCount=0
 		fun_TpOnCoord_TPshim = true
@@ -1218,7 +1222,7 @@ function ferma1TpPerenos_thread_function()
 			wait(100)
 		end
 		
-		wait(5000)
+		wait(math.random(4000, 5000))
 	end
 	sampAddChatMessage("Доделали", -1)
 end
@@ -1233,7 +1237,7 @@ function ferma2TpPerenos_thread_function()
 			wait(100)
 		end
 		
-		wait(5000)
+		wait(math.random(3600, 5000))
 		
 		fun_TpOnCoord_syncPacketCount=0
 		fun_TpOnCoord_TPshim = true
@@ -1242,7 +1246,7 @@ function ferma2TpPerenos_thread_function()
 			wait(100)
 		end
 		
-		wait(5000)
+		wait(math.random(3600, 5000))
 	end
 	sampAddChatMessage("Доделали", -1)
 end
@@ -1325,7 +1329,7 @@ function moveTudaObratno(blipX, blipY, blipZ)
 	if isCar then
 		PosDelay = 5 --делей если в машине
 	else
-		PosDelay = 1.45 --делей если пешком
+		PosDelay = 1 --делей если пешком
 	end
 	lua_thread.create(function()
 		while fun_TpOnCoord_TPshim do
@@ -1334,23 +1338,30 @@ function moveTudaObratno(blipX, blipY, blipZ)
 					local moveX, moveY, moveZ = calculateNextStep(playerX, playerY, playerZ, blipX, blipY, blipZ, PosDelay)
 					playerX, playerY, playerZ = playerX + moveX, playerY + moveY, playerZ + moveZ
 					syncMovement(playerX, playerY, playerZ, isCar)
+					fun_TpOnCoord_syncPacketCount=fun_TpOnCoord_syncPacketCount + 1
 				else
 					local moveX, moveY, moveZ = calculateNextStep(playerX, playerY, playerZ, myPosX, myPosY, myPosZ, PosDelay)
 					playerX, playerY, playerZ = playerX + moveX, playerY + moveY, playerZ + moveZ
 					syncMovement(playerX, playerY, playerZ, isCar)
+					fun_TpOnCoord_syncPacketCount=fun_TpOnCoord_syncPacketCount + 1
 				end
 				
 				if calculateDistance(playerX, playerY, blipX, blipY) < PosDelay and tuda then
 					syncMovement(blipX, blipY, blipZ, isCar)
+					fun_TpOnCoord_syncPacketCount=fun_TpOnCoord_syncPacketCount + 1
 					tuda = false
 				end
 				
 				if calculateDistance(playerX, playerY, myPosX, myPosY) < PosDelay and not tuda then
-					syncMovement(myPosX, myPosY, myPosZ, isCar)
 					--sampAddChatMessage(myPosX .. "|" .. myPosY .. "|" .. myPosZ, -1)
 					if isCar then
 						setCarCoordinates(getCarModel(storeCarCharIsInNoSave(PLAYER_PED)), myPosX, myPosY, myPosZ)
 					else
+						local data = samp_create_sync_data("player")
+						data.health = getCharHealth(PLAYER_PED)
+						data.specialAction = 0
+						data.animationId = 1189 -- просто стоим на месте
+						data.send()
 						setCharCoordinates(PLAYER_PED, myPosX, myPosY, myPosZ-1)
 					end
 					wait(100)
@@ -1363,7 +1374,7 @@ function moveTudaObratno(blipX, blipY, blipZ)
 					if isCar then
 						wait(fun_TpOnCoord_tpWait)
 					else
-						wait(1600)
+						wait(1000)
 					end
 				end
 				
