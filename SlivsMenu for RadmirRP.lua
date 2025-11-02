@@ -73,6 +73,8 @@ local main_window_state = imgui.ImBool(false)
 		local fermaCheckpointPosX = 0.0
 		local fermaCheckpointPosY = 0.0
 		local fermaCheckpointPosZ = 0.0
+	--Настройки
+		local settings_ActivationInsert = imgui.ImBool(false)
 
 --размер шрифта
 	local headsize = nil
@@ -88,23 +90,23 @@ local config = inicfg.load({
   {
 	AutoLoginStatus=false,
 	Password="pass"
+  },
+  Settings = {
+	ActivationInsert=false
   }
 })
 local AutoLoginStatus = imgui.ImBool(false)
-if (config.AutoLogin.AutoLoginStatus == false) then
-	AutoLoginStatus.v = false
-else
-	AutoLoginStatus.v = true
-end
+AutoLoginStatus.v = config.AutoLogin.AutoLoginStatus
 autologin_buffer.v = tostring(config.AutoLogin.Password)
+settings_ActivationInsert.v = config.Settings.ActivationInsert
 
 -- Update
 local dlstatus = require('moonloader').download_status
 
 update_state = false
 
-local script_vers = 155
-local script_vers_text = "1.55"
+local script_vers = 156
+local script_vers_text = "1.56"
 
 local update_url = "https://github.com/Lomtik655/SlivsMenu_for_RadmirRP/raw/refs/heads/main/update.ini"
 local update_path = getWorkingDirectory() .. "/radmirSlivsMenu.ini"
@@ -130,8 +132,13 @@ function main()
 	end)
 
 	if not update_state then
-		sampAddChatMessage("{00ff00}SlivsMenu {00b7ff}for RadmirRP {f5a207}by QQSliverQQ. {ffffff}Загружен!", -1)
-		sampAddChatMessage("Активация ---> {eefa05}/sm{ffffff}, {eefa05}INSERT", -1)
+		if settings_ActivationInsert.v then
+			sampAddChatMessage("{00ff00}SlivsMenu {00b7ff}for RadmirRP {f5a207}by QQSliverQQ. {ffffff}Загружен!", -1)
+			sampAddChatMessage("Активация ---> {eefa05}/sm{ffffff}, {eefa05}INSERT", -1)
+		else
+			sampAddChatMessage("{00ff00}SlivsMenu {00b7ff}for RadmirRP {f5a207}by QQSliverQQ. {ffffff}Загружен!", -1)
+			sampAddChatMessage("Активация ---> {eefa05}/sm{ffffff}", -1)
+		end
 	end
 	
 	--Потоки
@@ -398,7 +405,7 @@ function main()
 			end
 		
 		--Активация на INSERT
-		if isKeyJustPressed(VK_INSERT) then
+		if settings_ActivationInsert.v and isKeyJustPressed(VK_INSERT) then
 			imgui_main_window_state()
 		end
         if not main_window_state.v then
@@ -482,6 +489,10 @@ function imgui.OnDrawFrame()
 							main_menu_exitAll()
 							main_menu_rage = true
 						end
+						if imgui.Button(u8"Настройки", imgui.ImVec2(120, 50)) then
+							main_menu_exitAll()
+							main_menu_settings = true
+						end
 						imgui.PopFont()
 
 						apply_custom_style()
@@ -542,6 +553,19 @@ function imgui.OnDrawFrame()
 									end
 								end
 								
+							
+							imgui.EndChild()
+						end
+						
+						if main_menu_settings then -- Настройки
+							createChild("1", 470, 350, 140, 65, mainColorChild)
+							imgui.SetCursorPosX(25)
+							imgui.SetCursorPosY(15)
+							--Угон авто
+								if imgui.Checkbox(u8'Активация меню на INSERT', settings_ActivationInsert) then 
+									config.Settings.ActivationInsert = settings_ActivationInsert.v
+									inicfg.save(config)
+								end							
 							
 							imgui.EndChild()
 						end
@@ -687,13 +711,8 @@ function imgui.OnDrawFrame()
 		imgui.Begin('SlivsMenu for RadmirRP - AutoLogin', autologin_window_state, imgui.WindowFlags.NoResize)
 		--Вх на оленей и медведей
 		if imgui.Checkbox(u8'Авто-Логин', AutoLoginStatus) then 
-			if AutoLoginStatus.v then
-				config.AutoLogin.AutoLoginStatus = true
-				inicfg.save(config)
-			else
-				config.AutoLogin.AutoLoginStatus = false
-				inicfg.save(config)
-			end
+			config.AutoLogin.AutoLoginStatus = AutoLoginStatus.v
+			inicfg.save(config)
 		end
 		
 		imgui.PushItemWidth(150)
@@ -709,6 +728,7 @@ end
 function main_menu_exitAll()
 	main_menu_legit = false
 	main_menu_rage = false
+	main_menu_settings = false
 end
 
 -- Стиль окна
