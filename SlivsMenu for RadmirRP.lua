@@ -31,6 +31,7 @@ local main_window_state = imgui.ImBool(false)
 
 --Менюшки
 	local main_menu_legit = true
+	local main_menu_rage = false
 
 	--Легит
 		local fishing_window_state = imgui.ImBool(false)
@@ -54,7 +55,7 @@ local main_window_state = imgui.ImBool(false)
 		local legit_aimDuck_silent = imgui.ImBool(false)
 
 		--Угон машин, гм
-		local fun_ygonAvto = imgui.ImBool(false)
+		local rage_ygonAvto = imgui.ImBool(false)
 		local fun_gm_window_state = imgui.ImBool(false)
 		local fun_gm = imgui.ImBool(false)
 		local fun_gm1 = imgui.ImBool(false)
@@ -102,8 +103,8 @@ local dlstatus = require('moonloader').download_status
 
 update_state = false
 
-local script_vers = 151
-local script_vers_text = "1.51"
+local script_vers = 155
+local script_vers_text = "1.55"
 
 local update_url = "https://github.com/Lomtik655/SlivsMenu_for_RadmirRP/raw/refs/heads/main/update.ini"
 local update_path = getWorkingDirectory() .. "/radmirSlivsMenu.ini"
@@ -128,10 +129,9 @@ function main()
 		end
 	end)
 
-	if not update_state then -- чтобы 100 тыщ раз не выводило при обнове
-		-- Шапка
+	if not update_state then
 		sampAddChatMessage("{00ff00}SlivsMenu {00b7ff}for RadmirRP {f5a207}by QQSliverQQ. {ffffff}Загружен!", -1)
-		sampAddChatMessage("Активация ---> {eefa05}/sm", -1)
+		sampAddChatMessage("Активация ---> {eefa05}/sm{ffffff}, {eefa05}INSERT", -1)
 	end
 	
 	--Потоки
@@ -148,7 +148,7 @@ function main()
 		local x, y, z
 		--Ищем корды в памяти
 		modulehandle = getModuleHandle("clientside.dll")
-		fulladr = mem.getint32(modulehandle + 0x431120)
+		fulladr = mem.getint32(modulehandle + 0x431110)
 		ptr = '0x'.. string.format("%x", fulladr) --получили куда указывает указатель
 
 		x = mem.getfloat(ptr + 0x10) --добавили к найденной памяти указателя оффсет
@@ -230,7 +230,6 @@ function main()
 			downloadUrlToFile(script_url, script_path, function(id, status)
 				if status == dlstatus.STATUS_ENDDOWNLOADDATA then
 					sampAddChatMessage("{00ff00}SlivsMenu {00b7ff}for RadmirRP {f5a207}by QQSliverQQ {0bff00}успешно обновлен :P", -1)
-					thisScript():reload()
 				end
 			end)
 			break
@@ -377,7 +376,7 @@ function main()
 				local width, heigth = getScreenResolution()
 				local fov = getCameraFov() * 0.0174530
 				local coeficent = width / fov
-				local distance = 0.040 * coeficent
+				local distance = 0.025 * coeficent
 				local width_crosshair, heigth_crosshair = convertGameScreenCoordsToWindowScreenCoords(339.1, 179.1)
 				if legit_aimDuck.v then
 					renderDrawBoxWithBorder(width_crosshair-(distance/2), heigth_crosshair-(distance/2), distance, distance, nil, 2, 0xFF5AE053)
@@ -397,7 +396,11 @@ function main()
 			if fun_TpOnCoord_TPshim then
 				renderFontDrawText(font, "Teleporting", sw/2-15, sh/2+50, 0xFFFFFFFF)
 			end
-
+		
+		--Активация на INSERT
+		if isKeyJustPressed(VK_INSERT) then
+			imgui_main_window_state()
+		end
         if not main_window_state.v then
             imgui.Process = false
 		else
@@ -472,7 +475,12 @@ function imgui.OnDrawFrame()
 						colors[clr.ButtonActive]  = ImVec4(RGBA(201, 201, 201, 0.2))
 						imgui.PushFont(menu_buttonText_size)
 						if imgui.Button(u8"Легит", imgui.ImVec2(120, 50)) then
-
+							main_menu_exitAll()
+							main_menu_legit = true
+						end
+						if imgui.Button(u8"Рэйдж", imgui.ImVec2(120, 50)) then
+							main_menu_exitAll()
+							main_menu_rage = true
 						end
 						imgui.PopFont()
 
@@ -495,21 +503,36 @@ function imgui.OnDrawFrame()
 								ohota_window_state.v = true
 							end
 							imgui.PopFont()
-
+							
+							--Авто-логин
 							imgui.SetCursorPosX(25)
+							if imgui.Button(u8"Авто-логин", imgui.ImVec2(100, 50)) then
+								autologin_window_state.v = true
+							end
+							
+							imgui.EndChild()
+						end
+						
+						if main_menu_rage then -- Рэйдж
+							createChild("1", 470, 350, 140, 65, mainColorChild)
+							imgui.SetCursorPosX(25)
+							imgui.SetCursorPosY(15)
 							--Угон авто
-								imgui.Text(u8'Угон авто(Включен всегда)', main_color)
+								if imgui.Checkbox(u8'Угон авто', rage_ygonAvto) then end
 							
 							--Гм
 								imgui.SetCursorPosX(25)
 								if imgui.Button(u8"Гм", imgui.ImVec2(80, 20)) then
 									fun_gm_window_state.v = true
 								end
-							
+								
+								imgui.Text(u8"Ферма: /per1(бусаево) /per2(батырево) /vspah(трактор) ")
+								imgui.Text(u8"/grab_metka(ворует метку)")
+								imgui.Text(u8"Если метки далеко, то будет видно со стороны как оттепает")
 							-- Починка авто
 								imgui.SameLine()
 								imgui.SetCursorPosX(312)
-								imgui.SetCursorPosY(70)
+								imgui.SetCursorPosY(15)
 								if imgui.Button(u8"Починить машину", imgui.ImVec2(120, 50)) then
 									if isCharInAnyCar(playerPed) then
 										setCarHealth(storeCarCharIsInNoSave(playerPed), 1000.0)
@@ -518,12 +541,7 @@ function imgui.OnDrawFrame()
 										sampAddChatMessage(yellow_color_text .. 'Починить машину: {0dffdb}Боже, сядь в машину...', main_color)
 									end
 								end
-							
-							--Авто-логин
-							imgui.SetCursorPosX(25)
-							if imgui.Button(u8"Авто-логин", imgui.ImVec2(100, 50)) then
-								autologin_window_state.v = true
-							end
+								
 							
 							imgui.EndChild()
 						end
@@ -647,9 +665,10 @@ function imgui.OnDrawFrame()
 		imgui.Begin('SlivsMenu for RadmirRP - Ohota', ohota_window_state, imgui.WindowFlags.NoResize)
 		--Вх на оленей и медведей
 		if imgui.Checkbox(u8'Вх на оленей и медведей', legit_whohota) then end
+		imgui.Text("")
 		if imgui.Checkbox(u8'Вх на уток', legit_whDuck) then end
 		imgui.SameLine()
-		if imgui.Checkbox(u8'Трейсер', legit_whDuck_traser) then end
+		if imgui.Checkbox(u8'Трейсер на уток', legit_whDuck_traser) then end
 		if imgui.Checkbox(u8'Автоподбор уток', legit_AutoTakeDuck) then end
 		if imgui.Checkbox(u8'Аим на уток', legit_aimDuck) then end
 		imgui.SameLine()
@@ -685,6 +704,11 @@ function imgui.OnDrawFrame()
 		imgui.End()
 	end
 	
+end
+-- Функция для переключения менюшки(вырубаем все менюшки чтобы включить нужную)
+function main_menu_exitAll()
+	main_menu_legit = false
+	main_menu_rage = false
 end
 
 -- Стиль окна
@@ -1062,30 +1086,6 @@ function fishing_spamAlt_thread_function()
 	fishing_spamAlt_thread_stop = false
 end
 
---Синхранизация
---[[function sampev.onVehicleSync(playerId, vehicleId, data)
-	--sampAddChatMessage("X:" .. tostring(data.turnSpeed.x) .. " Y:" .. tostring(data.turnSpeed.y) .. " Z:" .. tostring(data.turnSpeed.z), -1)
-	--if (playerId == vehId) then
-		--sampAddChatMessage("X:" .. tostring(data.moveSpeed.x) .. " Y:" .. tostring(data.moveSpeed.y) .. " Z:" .. tostring(data.moveSpeed.z), -1)
-		--renderFontDrawText(font, string.format('X: %0.3f  Y: %0.3f  Z: %0.3f', data.moveSpeed.x, data.moveSpeed.y, data.moveSpeed.z) .. string.format(" Speed: %0.3f", tostring(math.abs(data.moveSpeed.x) + math.abs(data.moveSpeed.y) + math.abs(data.moveSpeed.z))), sw/2-150, sh/2+80, 0xFFFFFFFF)
-	--end
-	--return data
-	if (math.abs(data.moveSpeed.x) + math.abs(data.moveSpeed.y) + math.abs(data.moveSpeed.z)) > 3.0 then
-		data.moveSpeed.x = 0
-		data.moveSpeed.y = 0
-		data.moveSpeed.z = 0
-		local posX, posY, posZ = getCharCoordinates(playerPed)
-		data.position.x = posX - 10
-		data.position.y = posY - 10
-		--data.position.z = 0
-		renderFontDrawText(font, "Антирванка ID:" .. playerId, sw/2-100, sh/2+80, 0xFFFFFFFF)
-	end
-
-	--renderFontDrawText(font, string.format('X: %0.3f  Y: %0.3f  Z: %0.3f', data.moveSpeed.x, data.moveSpeed.y, data.moveSpeed.z), sw/2-150, sh/2+80, 0xFFFFFFFF)
-
-	return {playerId, vehicleId, data}
-end]]
-
 --Отправка пули на сервер
 function sampev.onSendBulletSync(data)
 	if legit_aimDuck_silent.v then
@@ -1098,7 +1098,7 @@ function sampev.onSendBulletSync(data)
 					local width, heigth = getScreenResolution()
 					local fov = getCameraFov() * 0.0174530
 					local coeficent = width / fov
-					local distance = 0.040 * coeficent
+					local distance = 0.025 * coeficent
 					local width_crosshair, heigth_crosshair = convertGameScreenCoordsToWindowScreenCoords(339.1, 179.1)
 					local wposX, wposY = convert3DCoordsToScreen(positionX_duck, positionY_duck, positionZ_duck+0.2)
 					if legit_aimDuck.v then
@@ -1133,7 +1133,9 @@ end
 
 --Эвенты
 function sampev.onRemovePlayerFromVehicle()
-	return false
+	if rage_ygonAvto.v then
+		return false
+	end
 end
 
 --Аим на уток
