@@ -32,6 +32,7 @@ local main_window_state = imgui.ImBool(false)
 --Менюшки
 	local main_menu_legit = true
 	local main_menu_rage = false
+	local main_menu_settings = false
 
 	--Легит
 		local fishing_window_state = imgui.ImBool(false)
@@ -105,8 +106,8 @@ local dlstatus = require('moonloader').download_status
 
 update_state = false
 
-local script_vers = 156
-local script_vers_text = "1.56"
+local script_vers = 160
+local script_vers_text = "1.60"
 
 local update_url = "https://github.com/Lomtik655/SlivsMenu_for_RadmirRP/raw/refs/heads/main/update.ini"
 local update_path = getWorkingDirectory() .. "/radmirSlivsMenu.ini"
