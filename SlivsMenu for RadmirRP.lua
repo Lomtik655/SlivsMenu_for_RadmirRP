@@ -54,6 +54,8 @@ local main_window_state = imgui.ImBool(false)
 		local legit_AutoTakeDuck = imgui.ImBool(false)
 		local legit_aimDuck = imgui.ImBool(false)
 		local legit_aimDuck_silent = imgui.ImBool(false)
+		local halloween_window_state = imgui.ImBool(false)
+		local legit_PilotAutoSkipTable = imgui.ImBool(false)
 
 		--Угон машин, гм
 		local rage_ygonAvto = imgui.ImBool(false)
@@ -76,6 +78,9 @@ local main_window_state = imgui.ImBool(false)
 		local fermaCheckpointPosZ = 0.0
 	--Настройки
 		local settings_ActivationInsert = imgui.ImBool(false)
+		
+	--Хеллоуин
+		local legit_halloween_sendListovka = imgui.ImBool(false)
 
 --размер шрифта
 	local headsize = nil
@@ -106,8 +111,8 @@ local dlstatus = require('moonloader').download_status
 
 update_state = false
 
-local script_vers = 160
-local script_vers_text = "1.60"
+local script_vers = 161
+local script_vers_text = "1.61"
 
 local update_url = "https://github.com/Lomtik655/SlivsMenu_for_RadmirRP/raw/refs/heads/main/update.ini"
 local update_path = getWorkingDirectory() .. "/radmirSlivsMenu.ini"
@@ -404,6 +409,43 @@ function main()
 			if fun_TpOnCoord_TPshim then
 				renderFontDrawText(font, "Teleporting", sw/2-15, sh/2+50, 0xFFFFFFFF)
 			end
+			
+			--Хеллоуин
+			if legit_halloween_sendListovka.v then
+				if isKeyDown(keys.VK_RBUTTON) and wasKeyPressed(keys.VK_B) then
+					local bs = raknetNewBitStream()
+					local MyPacket = {215, 2, 0, 0, 0, 0, 0, 19, 0, 0, 0, 77, 101, 110, 117, 73, 110, 116, 95, 79, 110, 80, 108, 97, 121, 101, 114, 75, 101, 121, 0, 0, 0, 0}
+					for i=1, #MyPacket do
+						raknetBitStreamWriteInt8(bs, MyPacket[i])
+					end
+					raknetSendBitStream(bs) -- отправляем пакет
+					raknetDeleteBitStream(bs) -- удаляем пакет
+					
+					bs = raknetNewBitStream()
+					MyPacket = {215, 2, 0, 0, 0, 0, 0, 25, 0, 0, 0, 77, 101, 110, 117, 73, 110, 116, 95, 79, 110, 80, 108, 97, 121, 101, 114, 67, 108, 105, 99, 107, 73, 116, 101, 109, 4, 0, 0, 0, 100, 1, 0, 0, 0, 100, 1, 0, 0, 0}
+					for i=1, #MyPacket do
+						raknetBitStreamWriteInt8(bs, MyPacket[i])
+					end
+					raknetSendBitStream(bs) -- отправляем пакет
+					raknetDeleteBitStream(bs) -- удаляем пакет
+					
+					bs = raknetNewBitStream()
+					MyPacket = {215, 2, 0, 0, 0, 0, 0, 25, 0, 0, 0, 77, 101, 110, 117, 73, 110, 116, 95, 79, 110, 80, 108, 97, 121, 101, 114, 67, 108, 105, 99, 107, 73, 116, 101, 109, 4, 0, 0, 0, 100, 58, 0, 0, 0, 100, 0, 0, 0, 0}
+					for i=1, #MyPacket do
+						raknetBitStreamWriteInt8(bs, MyPacket[i])
+					end
+					raknetSendBitStream(bs) -- отправляем пакет
+					raknetDeleteBitStream(bs) -- удаляем пакет
+					
+					bs = raknetNewBitStream()
+					MyPacket = {215, 2, 0, 0, 0, 0, 0, 24, 0, 0, 0, 77, 101, 110, 117, 73, 110, 116, 95, 79, 110, 67, 108, 111, 115, 101, 73, 110, 116, 101, 114, 102, 97, 99, 101, 2, 0, 0, 0, 100, 0, 0, 0, 0}
+					for i=1, #MyPacket do
+						raknetBitStreamWriteInt8(bs, MyPacket[i])
+					end
+					raknetSendBitStream(bs) -- отправляем пакет
+					raknetDeleteBitStream(bs) -- удаляем пакет
+				end
+			end
 		
 		--Активация на INSERT
 		if settings_ActivationInsert.v and isKeyJustPressed(VK_INSERT) then
@@ -467,14 +509,7 @@ function imgui.OnDrawFrame()
 							imgui.SameLine()
 							imgui.Text("v" .. script_vers_text, main_color)
 
-						--colors[clr.Separator] = ImVec4(RGBA(4, 212, 28, 0.7)) --255,128,0
 						imgui.Separator() -- Линия
-						--createChild("", 625, 5, 0, 50, ImVec4(RGBA(MenuRgb_R, MenuRgb_G, MenuRgb_B, 0.7)))
-						--imgui.EndChild()
-						-- imgui.SameLine() остаться на той же строке, чтобы сделать элементы подряд
-
-						--createChild("podrgb", 474, 354, 138, 63, ImVec4(RGBA(MenuRgb_R, MenuRgb_G, MenuRgb_B, 0.7)))
-						--imgui.EndChild()
 
 						-- Кнопки менюшек
 						imgui.SetCursorPosY(65)
@@ -521,6 +556,12 @@ function imgui.OnDrawFrame()
 							if imgui.Button(u8"Авто-логин", imgui.ImVec2(100, 50)) then
 								autologin_window_state.v = true
 							end
+							
+							if imgui.Button(u8"Хеллоуин", imgui.ImVec2(202, 50)) then
+								halloween_window_state.v = true
+							end
+							
+							if imgui.Checkbox(u8'Пилот Авто-скип таблички', legit_PilotAutoSkipTable) then end
 							
 							imgui.EndChild()
 						end
@@ -710,17 +751,30 @@ function imgui.OnDrawFrame()
 
 		-- Вывод окна
 		imgui.Begin('SlivsMenu for RadmirRP - AutoLogin', autologin_window_state, imgui.WindowFlags.NoResize)
-		--Вх на оленей и медведей
+		--Авто-Логин
 		if imgui.Checkbox(u8'Авто-Логин', AutoLoginStatus) then 
 			config.AutoLogin.AutoLoginStatus = AutoLoginStatus.v
 			inicfg.save(config)
 		end
-		
 		imgui.PushItemWidth(150)
 		if imgui.InputText(u8'', autologin_buffer) then
 			config.AutoLogin.Password = autologin_buffer.v
 			inicfg.save(config)
 		end
+		imgui.End()
+	end
+	
+	if halloween_window_state.v then
+		menus_style()
+		-- Настройки окна
+		imgui.SetNextWindowSize(imgui.ImVec2(450, 250), imgui.Cond.FirstUseEver)
+		imgui.SetNextWindowPos(imgui.ImVec2(sw / 2, sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+
+		-- Вывод окна
+		imgui.Begin('SlivsMenu for RadmirRP - Halloween', halloween_window_state, imgui.WindowFlags.NoResize)
+		--Авто-Логин
+		if imgui.Checkbox(u8'Выдать листовку ПКМ+B (R,J перестанет работать)', legit_halloween_sendListovka) then end
+
 		imgui.End()
 	end
 	
@@ -945,7 +999,7 @@ function onReceivePacket(id, bs)
 			bitstreamtext = nil
 		end
 		if _style and _type and l and style3 and length and bitstreamtext then
-			--print('pc: '.._style..'/'.._type..'/'..l..'/'..style3..'/'..length..'/'..bitstreamtext)
+			--print('Packet: '.._style..'/'.._type..'/'..l..'/'..style3..'/'..length..'/'..bitstreamtext)
 			if fishing_bot.v then
 				--print('bot: '.._style..'/'.._type..'/'..l..'/'..style3..'/'..length..'/'..bitstreamtext)
 				if (_style == 727) and (_type == 512) and (l == 0) and (style3 == 1) and (length == 64) then
@@ -1022,6 +1076,25 @@ function onReceivePacket(id, bs)
 				raknetDeleteBitStream(bs) -- удаляем пакет
 			end
 			
+			if legit_halloween_sendListovka.v then
+				if (bitstreamtext == "PlayerInteraction") or (string.find(bitstreamtext, "interface('PlayerInteraction').onServerResponse", 1, true)) then
+					return false
+				end
+			end
+			
+			-- 727/512/0/1/120/window.addDialogInQueue('[0,0,"Auaa?eoa aaenoaea","","Aa","Iao",0,0]', "Au oioeoa caeii?eou ?aaioo?", 0)
+			if legit_PilotAutoSkipTable.v then
+				if (string.find(bitstreamtext, "window.addDialogInQueue('[0,0,", 1, true)) then
+					local bs = raknetNewBitStream()
+					local MyPacket = {215, 2, 0, 0, 0, 0, 0, 16, 0, 0, 0, 79, 110, 68, 105, 97, 108, 111, 103, 82, 101, 115, 112, 111, 110, 115, 101, 8, 0, 0, 0, 100, 0, 0, 0, 0, 100, 0, 0, 0, 0, 100, 255, 255, 255, 255, 115, 0, 0, 0, 0}
+					for i=1, #MyPacket do
+						raknetBitStreamWriteInt8(bs, MyPacket[i])
+					end
+					raknetSendBitStream(bs) -- отправляем пакет
+					raknetDeleteBitStream(bs) -- удаляем пакет
+					return false
+				end
+			end
 		end
 	end
 end
