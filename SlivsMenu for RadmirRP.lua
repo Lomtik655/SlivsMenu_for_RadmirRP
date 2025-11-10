@@ -37,6 +37,10 @@ local main_window_state = imgui.ImBool(false)
 	--Легит
 		local fishing_window_state = imgui.ImBool(false)
 		local ohota_window_state = imgui.ImBool(false)
+		local halloween_window_state = imgui.ImBool(false)
+		local diving_window_state = imgui.ImBool(false)
+		local pilot_window_state = imgui.ImBool(false)
+		
 		local fishing_helper = imgui.ImBool(false)
 		local fishing_helper_buffer = imgui.ImBuffer(256)
 		local fishing_helper_bot = imgui.ImBool(false)
@@ -54,8 +58,9 @@ local main_window_state = imgui.ImBool(false)
 		local legit_AutoTakeDuck = imgui.ImBool(false)
 		local legit_aimDuck = imgui.ImBool(false)
 		local legit_aimDuck_silent = imgui.ImBool(false)
-		local halloween_window_state = imgui.ImBool(false)
 		local legit_PilotAutoSkipTable = imgui.ImBool(false)
+		local legit_whDiving = imgui.ImBool(false)
+		local legit_whDiving_traser = imgui.ImBool(false)
 
 		--Угон машин, гм
 		local rage_ygonAvto = imgui.ImBool(false)
@@ -78,6 +83,8 @@ local main_window_state = imgui.ImBool(false)
 		local fermaCheckpointPosZ = 0.0
 	--Настройки
 		local settings_ActivationInsert = imgui.ImBool(false)
+		local settings_AutoY = imgui.ImBool(false)
+		local settings_AutoY_clicker = false
 		
 	--Хеллоуин
 		local legit_halloween_sendListovka = imgui.ImBool(false)
@@ -98,21 +105,23 @@ local config = inicfg.load({
 	Password="pass"
   },
   Settings = {
-	ActivationInsert=false
+	ActivationInsert=false,
+	AutoY=false
   }
 })
 local AutoLoginStatus = imgui.ImBool(false)
 AutoLoginStatus.v = config.AutoLogin.AutoLoginStatus
 autologin_buffer.v = tostring(config.AutoLogin.Password)
 settings_ActivationInsert.v = config.Settings.ActivationInsert
+settings_AutoY.v = config.Settings.AutoY
 
 -- Update
 local dlstatus = require('moonloader').download_status
 
 update_state = false
 
-local script_vers = 161
-local script_vers_text = "1.61"
+local script_vers = 162
+local script_vers_text = "1.62"
 
 local update_url = "https://github.com/Lomtik655/SlivsMenu_for_RadmirRP/raw/refs/heads/main/update.ini"
 local update_path = getWorkingDirectory() .. "/radmirSlivsMenu.ini"
@@ -410,6 +419,29 @@ function main()
 				renderFontDrawText(font, "Teleporting", sw/2-15, sh/2+50, 0xFFFFFFFF)
 			end
 			
+			--Вх на дайвинг
+			if legit_whDiving.v then
+				for _, v in pairs(getAllObjects()) do
+					if sampGetObjectSampIdByHandle(v) ~= -1 then
+						asd = sampGetObjectSampIdByHandle(v)
+					end
+					if isObjectOnScreen(v) then
+						local _, x, y, z = getObjectCoordinates(v)
+						local x1, y1 = convert3DCoordsToScreen(x,y,z)
+						local model = getObjectModel(v)
+						local x2,y2,z2 = getCharCoordinates(PLAYER_PED)
+						local x10, y10 = convert3DCoordsToScreen(x2,y2,z2)
+						local distance = string.format("%.1f", getDistanceBetweenCoords3d(x, y, z, x2, y2, z2))
+						if model == 16500 then
+							renderFontDrawText(font_whohota, "Сундук".." "..distance, x1, y1, 0xFF00FF00)
+							if legit_whDiving_traser.v then
+								renderDrawLine(x10, y10, x1, y1, 1.0, 0xFF00FF00)
+							end
+						end
+					end
+				end
+			end
+			
 			--Хеллоуин
 			if legit_halloween_sendListovka.v then
 				if isKeyDown(keys.VK_RBUTTON) and wasKeyPressed(keys.VK_B) then
@@ -549,6 +581,18 @@ function imgui.OnDrawFrame()
 							if imgui.Button(u8"Охота", imgui.ImVec2(202, 50)) then
 								ohota_window_state.v = true
 							end
+							imgui.SetCursorPosX(25)
+							if imgui.Button(u8"Дайвинг", imgui.ImVec2(202, 50)) then
+								diving_window_state.v = true
+							end
+							imgui.SameLine()
+							if imgui.Button(u8"Пилот", imgui.ImVec2(202, 50)) then
+								pilot_window_state.v = true
+							end
+							imgui.SetCursorPosX(25)
+							if imgui.Button(u8"Хеллоуин", imgui.ImVec2(202, 50)) then
+								halloween_window_state.v = true
+							end
 							imgui.PopFont()
 							
 							--Авто-логин
@@ -556,12 +600,6 @@ function imgui.OnDrawFrame()
 							if imgui.Button(u8"Авто-логин", imgui.ImVec2(100, 50)) then
 								autologin_window_state.v = true
 							end
-							
-							if imgui.Button(u8"Хеллоуин", imgui.ImVec2(202, 50)) then
-								halloween_window_state.v = true
-							end
-							
-							if imgui.Checkbox(u8'Пилот Авто-скип таблички', legit_PilotAutoSkipTable) then end
 							
 							imgui.EndChild()
 						end
@@ -603,11 +641,16 @@ function imgui.OnDrawFrame()
 							createChild("1", 470, 350, 140, 65, mainColorChild)
 							imgui.SetCursorPosX(25)
 							imgui.SetCursorPosY(15)
-							--Угон авто
 								if imgui.Checkbox(u8'Активация меню на INSERT', settings_ActivationInsert) then 
 									config.Settings.ActivationInsert = settings_ActivationInsert.v
 									inicfg.save(config)
-								end							
+								end
+								
+							imgui.SetCursorPosX(25)	
+								if imgui.Checkbox(u8'Авто Y', settings_AutoY) then 
+									config.Settings.AutoY = settings_AutoY.v
+									inicfg.save(config)
+								end
 							
 							imgui.EndChild()
 						end
@@ -764,6 +807,37 @@ function imgui.OnDrawFrame()
 		imgui.End()
 	end
 	
+	-- Окно для дайвинга
+	if diving_window_state.v then
+		menus_style()
+		-- Настройки окна
+		imgui.SetNextWindowSize(imgui.ImVec2(300, 150), imgui.Cond.FirstUseEver)
+		imgui.SetNextWindowPos(imgui.ImVec2(sw / 2, sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+
+		-- Вывод окна
+		imgui.Begin('SlivsMenu for RadmirRP - Diving', diving_window_state, imgui.WindowFlags.NoResize)
+
+		if imgui.Checkbox(u8'Вх на сундуки', legit_whDiving) then end
+		if imgui.Checkbox(u8'Трейсер на сундуки', legit_whDiving_traser) then end
+
+		imgui.End()
+	end
+	
+	-- Окно для пилота
+	if pilot_window_state.v then
+		menus_style()
+		-- Настройки окна
+		imgui.SetNextWindowSize(imgui.ImVec2(300, 150), imgui.Cond.FirstUseEver)
+		imgui.SetNextWindowPos(imgui.ImVec2(sw / 2, sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+
+		-- Вывод окна
+		imgui.Begin('SlivsMenu for RadmirRP - Pilot', pilot_window_state, imgui.WindowFlags.NoResize)
+
+		if imgui.Checkbox(u8'Пилот Авто-скип таблички', legit_PilotAutoSkipTable) then end
+
+		imgui.End()
+	end
+	
 	if halloween_window_state.v then
 		menus_style()
 		-- Настройки окна
@@ -772,7 +846,7 @@ function imgui.OnDrawFrame()
 
 		-- Вывод окна
 		imgui.Begin('SlivsMenu for RadmirRP - Halloween', halloween_window_state, imgui.WindowFlags.NoResize)
-		--Авто-Логин
+
 		if imgui.Checkbox(u8'Выдать листовку ПКМ+B (R,J перестанет работать)', legit_halloween_sendListovka) then end
 
 		imgui.End()
@@ -999,7 +1073,7 @@ function onReceivePacket(id, bs)
 			bitstreamtext = nil
 		end
 		if _style and _type and l and style3 and length and bitstreamtext then
-			--print('Packet: '.._style..'/'.._type..'/'..l..'/'..style3..'/'..length..'/'..bitstreamtext)
+			print('Packet: '.._style..'/'.._type..'/'..l..'/'..style3..'/'..length..'/'..bitstreamtext)
 			if fishing_bot.v then
 				--print('bot: '.._style..'/'.._type..'/'..l..'/'..style3..'/'..length..'/'..bitstreamtext)
 				if (_style == 727) and (_type == 512) and (l == 0) and (style3 == 1) and (length == 64) then
@@ -1084,7 +1158,7 @@ function onReceivePacket(id, bs)
 			
 			-- 727/512/0/1/120/window.addDialogInQueue('[0,0,"Auaa?eoa aaenoaea","","Aa","Iao",0,0]', "Au oioeoa caeii?eou ?aaioo?", 0)
 			if legit_PilotAutoSkipTable.v then
-				if (string.find(bitstreamtext, "window.addDialogInQueue('[0,0,", 1, true)) then
+				if string.find(bitstreamtext, "window.addDialogInQueue('[0,0,", 1, true) then
 					local bs = raknetNewBitStream()
 					local MyPacket = {215, 2, 0, 0, 0, 0, 0, 16, 0, 0, 0, 79, 110, 68, 105, 97, 108, 111, 103, 82, 101, 115, 112, 111, 110, 115, 101, 8, 0, 0, 0, 100, 0, 0, 0, 0, 100, 0, 0, 0, 0, 100, 255, 255, 255, 255, 115, 0, 0, 0, 0}
 					for i=1, #MyPacket do
@@ -1094,6 +1168,33 @@ function onReceivePacket(id, bs)
 					raknetDeleteBitStream(bs) -- удаляем пакет
 					return false
 				end
+			end
+			-- interface('ProgressBar').getBarInfo("[["Нажимайте Y <br>с небольшим интервалом",0,1000]]")
+			if settings_AutoY.v then
+				if string.find(bitstreamtext, "interface('ProgressBar').getBarInfo(\"[[\"Нажимайте Y <br>с небольшим интервалом\",0,1000]]\")", 1, true) or ((bitstreamtext == "ProgressBar") and (getCharModel(PLAYER_PED) == 15576)) then
+					settings_AutoY_clicker = true
+					
+					lua_thread.create(function()
+						setVirtualKeyDown(VK_Y, true)
+						wait(50)
+						setVirtualKeyDown(VK_Y, false)
+					end)
+				end
+				
+				if string.find(bitstreamtext, "interface('ProgressBar').setFill(0, ", 1, true) and settings_AutoY_clicker then
+					local setFill = tonumber(string.sub(bitstreamtext, 37, -2))
+					if (setFill == 100) then
+						settings_AutoY_clicker = false
+					else
+						lua_thread.create(function()
+							wait(600)
+							setVirtualKeyDown(VK_Y, true)
+							wait(50)
+							setVirtualKeyDown(VK_Y, false)
+						end)
+					end
+				end
+				
 			end
 		end
 	end
