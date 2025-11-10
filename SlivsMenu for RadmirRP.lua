@@ -120,8 +120,8 @@ local dlstatus = require('moonloader').download_status
 
 update_state = false
 
-local script_vers = 163
-local script_vers_text = "1.63"
+local script_vers = 164
+local script_vers_text = "1.64"
 
 local update_url = "https://github.com/Lomtik655/SlivsMenu_for_RadmirRP/raw/refs/heads/main/update.ini"
 local update_path = getWorkingDirectory() .. "/radmirSlivsMenu.ini"
@@ -1073,7 +1073,7 @@ function onReceivePacket(id, bs)
 			bitstreamtext = nil
 		end
 		if _style and _type and l and style3 and length and bitstreamtext then
-			print('Packet: '.._style..'/'.._type..'/'..l..'/'..style3..'/'..length..'/'..bitstreamtext)
+			--print('Packet: '.._style..'/'.._type..'/'..l..'/'..style3..'/'..length..'/'..bitstreamtext)
 			if fishing_bot.v then
 				--print('bot: '.._style..'/'.._type..'/'..l..'/'..style3..'/'..length..'/'..bitstreamtext)
 				if (_style == 727) and (_type == 512) and (l == 0) and (style3 == 1) and (length == 64) then
