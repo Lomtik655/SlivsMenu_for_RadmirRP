@@ -120,8 +120,8 @@ local dlstatus = require('moonloader').download_status
 
 update_state = false
 
-local script_vers = 162
-local script_vers_text = "1.62"
+local script_vers = 163
+local script_vers_text = "1.63"
 
 local update_url = "https://github.com/Lomtik655/SlivsMenu_for_RadmirRP/raw/refs/heads/main/update.ini"
 local update_path = getWorkingDirectory() .. "/radmirSlivsMenu.ini"
@@ -1176,7 +1176,7 @@ function onReceivePacket(id, bs)
 					
 					lua_thread.create(function()
 						setVirtualKeyDown(VK_Y, true)
-						wait(50)
+						wait(100)
 						setVirtualKeyDown(VK_Y, false)
 					end)
 				end
@@ -1189,7 +1189,7 @@ function onReceivePacket(id, bs)
 						lua_thread.create(function()
 							wait(600)
 							setVirtualKeyDown(VK_Y, true)
-							wait(50)
+							wait(100)
 							setVirtualKeyDown(VK_Y, false)
 						end)
 					end
