@@ -67,16 +67,22 @@ local main_window_state = imgui.ImBool(false)
 		local fun_gm_window_state = imgui.ImBool(false)
 		local fun_gm = imgui.ImBool(false)
 		local fun_gm1 = imgui.ImBool(false)
+		
 		--Телепорт атп
 		local fun_TpOnCoord_TPshim = false
 		local fun_TpOnCoord_syncPacketCount = 0
 		local fun_TpOnCoord_tpWait = 1100
 		local fun_TpOnCoord_tpTime
 		local fun_teleport_window_state = imgui.ImBool(false)
+		local LastObj = -1
+		local LastObjDistance = math.huge
+		
 	--Боты
 		local ferma1TpPerenos = false
 		local ferma2TpPerenos = false
 		local fermaTpVspah = false
+		local fermaYdobrenie = false
+		local fermaSbor = false
 
 		local fermaCheckpointPosX = 0.0
 		local fermaCheckpointPosY = 0.0
@@ -120,8 +126,8 @@ local dlstatus = require('moonloader').download_status
 
 update_state = false
 
-local script_vers = 164
-local script_vers_text = "1.64"
+local script_vers = 165
+local script_vers_text = "1.65"
 
 local update_url = "https://github.com/Lomtik655/SlivsMenu_for_RadmirRP/raw/refs/heads/main/update.ini"
 local update_path = getWorkingDirectory() .. "/radmirSlivsMenu.ini"
@@ -163,6 +169,8 @@ function main()
 	ferma1TpPerenos_thread = lua_thread.create_suspended(ferma1TpPerenos_thread_function)
     ferma2TpPerenos_thread = lua_thread.create_suspended(ferma2TpPerenos_thread_function)
 	fermaTpVspah_thread = lua_thread.create_suspended(fermaTpVspah_thread_function)
+	fermaYdobrenie_thread = lua_thread.create_suspended(fermaYdobrenie_thread_function)
+	fermaSbor_thread = lua_thread.create_suspended(fermaSbor_thread_function)
 	
 	-- Команды
 	sampRegisterChatCommand("sm", imgui_main_window_state)
@@ -178,14 +186,19 @@ function main()
 		z = 1000.0
 		z = getGroundZFor3dCoord(x,y,z)
 
-		fun_TpOnCoord_syncPacketCount=0
-		fun_TpOnCoord_TPshim = true
-		fun_TpOnCoord_tpTime=os.clock()
+		
 		--sampAddChatMessage("x:" .. x .. " y:" .. y, -1)
 		if isCharInAnyCar(PLAYER_PED) then
+			fun_TpOnCoord_syncPacketCount=0
+			fun_TpOnCoord_TPshim = true
+			fun_TpOnCoord_tpTime=os.clock()
 			moveToBlip(x,y,z+15)
 		else
-			moveToBlip(x,y,z)
+			local data = samp_create_sync_data("player")
+			data.position = {x, y, z}
+			data.surfingVehicleId = LastObj
+			data.send()
+			setCharCoordinates(PLAYER_PED, x,y,z)
 		end
 	end)
 	sampRegisterChatCommand("rtpc", function(arg)
@@ -203,7 +216,7 @@ function main()
 		end
 	end)
 	
-	sampRegisterChatCommand("per1", function(arg)
+	sampRegisterChatCommand("ferma_per1", function(arg)
 		ferma1TpPerenos = not ferma1TpPerenos
 		if ferma1TpPerenos then
 			sampAddChatMessage("Начинаем тепаться", -1)
@@ -212,7 +225,7 @@ function main()
 			sampAddChatMessage("Дотепываемся последний раз", -1)
 		end
 	end)
-	sampRegisterChatCommand("per2", function(arg)
+	sampRegisterChatCommand("ferma_per2", function(arg)
 		ferma2TpPerenos = not ferma2TpPerenos
 		if ferma2TpPerenos then
 			sampAddChatMessage("Начинаем тепаться", -1)
@@ -221,7 +234,7 @@ function main()
 			sampAddChatMessage("Дотепываемся последний раз", -1)
 		end
 	end)
-	sampRegisterChatCommand("vspah", function(arg)
+	sampRegisterChatCommand("ferma_vspah", function(arg)
 		fermaTpVspah = not fermaTpVspah
 		if fermaTpVspah then
 			sampAddChatMessage("Начинаем тепаться", -1)
@@ -230,10 +243,33 @@ function main()
 			sampAddChatMessage("Дотепываемся последний раз", -1)
 		end
 	end)
-	sampRegisterChatCommand("grab_metka", function(arg)
-		fun_TpOnCoord_syncPacketCount=0
-		fun_TpOnCoord_TPshim = true
-		moveTudaObratno(fermaCheckpointPosX, fermaCheckpointPosY, fermaCheckpointPosZ) -- тп на метку
+	sampRegisterChatCommand("ferma_grabmetka", function()
+		local x, y, z = getCharCoordinates(PLAYER_PED)
+		local data = samp_create_sync_data("player")
+		data.position = {fermaCheckpointPosX, fermaCheckpointPosY, fermaCheckpointPosZ} -- тп на мельницу
+		data.surfingVehicleId = LastObj
+		data.send()
+		data.position = {x, y, z}
+		data.surfingVehicleId = LastObj
+		data.send()
+	end)
+	sampRegisterChatCommand("ferma_ydobrenie", function()
+		fermaYdobrenie = not fermaYdobrenie
+		if fermaYdobrenie then
+			sampAddChatMessage("Начинаем удобрять беспалевно", -1)
+			fermaYdobrenie_thread:run()
+		else
+			sampAddChatMessage("Удобряем последний раз", -1)
+		end
+	end)
+	sampRegisterChatCommand("ferma_sbor", function(arg)
+		fermaSbor = not fermaSbor
+		if fermaSbor then
+			sampAddChatMessage("Начинаем тепаться", -1)
+			fermaSbor_thread:run()
+		else
+			sampAddChatMessage("Дотепываемся последний раз", -1)
+		end
 	end)
 	
 	--Фонты
@@ -442,6 +478,7 @@ function main()
 				end
 			end
 			
+			
 			--Хеллоуин
 			if legit_halloween_sendListovka.v then
 				if isKeyDown(keys.VK_RBUTTON) and wasKeyPressed(keys.VK_B) then
@@ -478,7 +515,8 @@ function main()
 					raknetDeleteBitStream(bs) -- удаляем пакет
 				end
 			end
-		
+			
+			
 		--Активация на INSERT
 		if settings_ActivationInsert.v and isKeyJustPressed(VK_INSERT) then
 			imgui_main_window_state()
@@ -617,9 +655,8 @@ function imgui.OnDrawFrame()
 									fun_gm_window_state.v = true
 								end
 								
-								imgui.Text(u8"Ферма: /per1(бусаево) /per2(батырево) /vspah(трактор) ")
-								imgui.Text(u8"/grab_metka(ворует метку)")
-								imgui.Text(u8"Если метки далеко, то будет видно со стороны как оттепает")
+								imgui.Text(u8"Ферма: /ferma_per1(бусаево) /ferma_per2(батырево) /ferma_vspah(трактор)")
+								imgui.Text(u8"      /ferma_grabmetka(ворует метку)\n      /ferma_ydobrenie(удобрение)\n      /ferma_sbor(сбор)")
 							-- Починка авто
 								imgui.SameLine()
 								imgui.SetCursorPosX(312)
@@ -1196,6 +1233,7 @@ function onReceivePacket(id, bs)
 				end
 				
 			end
+			
 		end
 	end
 end
@@ -1204,6 +1242,15 @@ end
 --end
 
 function sampev.onSendPlayerSync(data)
+	if getSurfingObject() ~= -1 then
+        data.surfingVehicleId = LastObj
+    end
+	--sampAddChatMessage("specialAction:" .. data.specialAction .. " animationId:" .. data.animationId .. " animationFlags:" .. data.animationFlags, -1)
+	if fermaYdobrenie then
+		data.specialAction = 0
+		data.animationId = 1189
+		data.animationFlags = 32772
+	end
 	if fun_TpOnCoord_TPshim and not isCharInAnyCar(PLAYER_PED) then
 		return false
 	end
@@ -1264,7 +1311,6 @@ function sampev.onServerMessage(color, text)
 			end
 		end
 	end
-
 end
 
 --Спам ALT для рыбалки
@@ -1403,47 +1449,54 @@ end
 
 function ferma1TpPerenos_thread_function()
 	while ferma1TpPerenos do
-		fun_TpOnCoord_syncPacketCount=0
-		fun_TpOnCoord_TPshim = true
-		moveTudaObratno(-1074.3, -1026.2, 47) -- тп на мельницу
-		while fun_TpOnCoord_TPshim do
-			wait(100)
-		end
+		local x, y, z = getCharCoordinates(PLAYER_PED)
+		local data = samp_create_sync_data("player")
+		data.position = {-1074.3, -1026.2, 47} -- тп на мельницу
+		data.surfingVehicleId = LastObj
+		data.send()
+		data.position = {x, y, z}
+		data.surfingVehicleId = LastObj
+		data.send()
+
+		wait(math.random(5000, 6000))
 		
-		wait(math.random(5000, 7500))
-		
-		fun_TpOnCoord_syncPacketCount=0
-		fun_TpOnCoord_TPshim = true
-		moveTudaObratno(-1121.1, -828, 51) -- тп на сдачу
-		while fun_TpOnCoord_TPshim do
-			wait(100)
-		end
-		
-		wait(math.random(4000, 5000))
+		x, y, z = getCharCoordinates(PLAYER_PED)
+		data = samp_create_sync_data("player")
+		data.position = {-1121.1, -828, 51} -- тп на сдачу
+		data.surfingVehicleId = LastObj
+		data.send()
+		data.position = {x, y, z}
+		data.surfingVehicleId = LastObj
+		data.send()
+
+		wait(math.random(5000, 6000))
 	end
 	sampAddChatMessage("Доделали", -1)
 end
 
 function ferma2TpPerenos_thread_function()
 	while ferma2TpPerenos do
+		local x, y, z = getCharCoordinates(PLAYER_PED)
+		local data = samp_create_sync_data("player")
+		data.position = {1556.2, 651.4, 15} -- тп на мельницу
+		data.surfingVehicleId = LastObj
+		data.send()
+		data.position = {x, y, z}
+		data.surfingVehicleId = LastObj
+		data.send()
 		
-		fun_TpOnCoord_syncPacketCount=0
-		fun_TpOnCoord_TPshim = true
-		moveTudaObratno(1556.2, 651.4, 15) -- тп на мельницу
-		while fun_TpOnCoord_TPshim do
-			wait(100)
-		end
+		wait(math.random(4000, 5000))
 		
-		wait(math.random(3600, 5000))
+		x, y, z = getCharCoordinates(PLAYER_PED)
+		data = samp_create_sync_data("player")
+		data.position = {1657.7, 692.3, 15.5} -- тп на сдачу
+		data.surfingVehicleId = LastObj
+		data.send()
+		data.position = {x, y, z}
+		data.surfingVehicleId = LastObj
+		data.send()
 		
-		fun_TpOnCoord_syncPacketCount=0
-		fun_TpOnCoord_TPshim = true
-		moveTudaObratno(1657.7, 692.3, 15.5) -- тп на сдачу
-		while fun_TpOnCoord_TPshim do
-			wait(100)
-		end
-		
-		wait(math.random(3600, 5000))
+		wait(math.random(4000, 5000))
 	end
 	sampAddChatMessage("Доделали", -1)
 end
@@ -1463,6 +1516,49 @@ function fermaTpVspah_thread_function()
 	sampAddChatMessage("Доделали", -1)
 end
 
+function fermaYdobrenie_thread_function()
+	while fermaYdobrenie do
+		local x, y, z = getCharCoordinates(PLAYER_PED)
+		local data = samp_create_sync_data("player")
+		data.position = {fermaCheckpointPosX, fermaCheckpointPosY, fermaCheckpointPosZ}
+		data.surfingVehicleId = LastObj
+		data.send()
+		data.position = {x, y, z}
+		data.surfingVehicleId = LastObj
+		data.send()
+		
+		wait(math.random(5000, 20000))
+	end
+	sampAddChatMessage("Доделали", -1)
+end
+
+function fermaSbor_thread_function()
+	while fermaSbor do
+		local x, y, z = getCharCoordinates(PLAYER_PED)
+		local data = samp_create_sync_data("player")
+		data.position = {fermaCheckpointPosX, fermaCheckpointPosY, fermaCheckpointPosZ}
+		data.surfingVehicleId = LastObj
+		data.send()
+		data.position = {x, y, z}
+		data.surfingVehicleId = LastObj
+		data.send()
+		
+		wait(math.random(15000, 30000))
+		
+		local x, y, z = getCharCoordinates(PLAYER_PED)
+		local data = samp_create_sync_data("player")
+		data.position = {fermaCheckpointPosX, fermaCheckpointPosY, fermaCheckpointPosZ}
+		data.surfingVehicleId = LastObj
+		data.send()
+		data.position = {x, y, z}
+		data.surfingVehicleId = LastObj
+		data.send()
+		
+		wait(math.random(10000, 20000))
+	end
+	sampAddChatMessage("Доделали", -1)
+end
+
 function sampev.onSetCheckpoint(position, radius)
 	if (radius == 1) or (radius == 2.5) then
 		fermaCheckpointPosX = position.x
@@ -1472,6 +1568,33 @@ function sampev.onSetCheckpoint(position, radius)
 	end
 end
 
+function getSurfingObject()
+    local PLAYER_POS = {getCharCoordinates(PLAYER_PED)}
+    local closestObject = nil
+    local closestDistance = math.huge
+    for objects = 1, 1024 do
+        local result, handle = findAllRandomObjectsInSphere(PLAYER_POS[1], PLAYER_POS[2], PLAYER_POS[3], math.huge, true)
+        if result and doesObjectExist(handle) then
+            local coordinates_res, x, y, z = getObjectCoordinates(handle)
+            local objectModel = getObjectModel(handle)
+            if objectModel == 16877 or objectModel == 10476 or objectModel == 15874 or objectModel == 16955 or objectModel == 16512 or objectModel == 17163 or objectModel == 10440 or objectModel == 10441 or objectModel == 10442 or objectModel == 10443 or objectModel == 10444 or objectModel == 10445 or objectModel == 10446 or objectModel == 10447 or objectModel == 13946 or objectModel == 15738 or objectModel == 16229 or objectModel == 17637 then
+                local CURRENT_DISTANCE = getDistanceBetweenCoords3d(PLAYER_POS[1], PLAYER_POS[2], PLAYER_POS[3], x, y, z)
+
+                if CURRENT_DISTANCE < closestDistance then
+                    closestObject = handle
+                    closestDistance = CURRENT_DISTANCE
+                end
+            end
+        end
+    end
+
+    if closestObject and closestDistance <= LastObjDistance then
+        LastObj = sampGetObjectSampIdByHandle(closestObject) + 2000
+		--sampAddChatMessage("объект", -1)
+    end
+
+    return LastObj or -1
+end
 --Телепорт атп/мтп
 function moveToBlip(blipX, blipY, blipZ)
 	local playerX, playerY, playerZ = getCharCoordinates(PLAYER_PED)
@@ -1480,7 +1603,7 @@ function moveToBlip(blipX, blipY, blipZ)
 	if isCar then
 		PosDelay = 5 --делей если в машине
 	else
-		PosDelay = 1.45 --делей если пешком
+		PosDelay = 500 --делей если пешком
 	end
 	lua_thread.create(function()
 		while fun_TpOnCoord_TPshim do
@@ -1596,11 +1719,11 @@ function syncMovement(x, y, z, isCar)
 	if isCar then
 		local data = samp_create_sync_data("vehicle")
 		data.position={x+randomizes, y+randomizes,z+randomizes}
-		--data.playerHealth = getCharHealth(PLAYER_PED)
 		data.send()
 	else
 		local data = samp_create_sync_data("player")
 		data.position={x+randomizes, y+randomizes,z+randomizes}
+		data.surfingVehicleId = LastObj
 		data.health = 1/0
 		data.keysData = 0
 		data.specialAction = 4
