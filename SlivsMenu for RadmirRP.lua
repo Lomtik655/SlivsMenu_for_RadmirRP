@@ -91,6 +91,7 @@ local main_window_state = imgui.ImBool(false)
 		local settings_ActivationInsert = imgui.ImBool(false)
 		local settings_AutoY = imgui.ImBool(false)
 		local settings_AutoY_clicker = false
+		local settings_ObhodAC = imgui.ImBool(false)
 		
 	--Хеллоуин
 		local legit_halloween_sendListovka = imgui.ImBool(false)
@@ -112,7 +113,8 @@ local config = inicfg.load({
   },
   Settings = {
 	ActivationInsert=false,
-	AutoY=false
+	AutoY=false,
+	Obhod_AC=false
   }
 })
 local AutoLoginStatus = imgui.ImBool(false)
@@ -120,14 +122,15 @@ AutoLoginStatus.v = config.AutoLogin.AutoLoginStatus
 autologin_buffer.v = tostring(config.AutoLogin.Password)
 settings_ActivationInsert.v = config.Settings.ActivationInsert
 settings_AutoY.v = config.Settings.AutoY
+settings_ObhodAC.v = config.Settings.Obhod_AC
 
 -- Update
 local dlstatus = require('moonloader').download_status
 
 update_state = false
 
-local script_vers = 165
-local script_vers_text = "1.65"
+local script_vers = 166
+local script_vers_text = "1.66"
 
 local update_url = "https://github.com/Lomtik655/SlivsMenu_for_RadmirRP/raw/refs/heads/main/update.ini"
 local update_path = getWorkingDirectory() .. "/radmirSlivsMenu.ini"
@@ -688,6 +691,11 @@ function imgui.OnDrawFrame()
 									config.Settings.AutoY = settings_AutoY.v
 									inicfg.save(config)
 								end
+							imgui.SetCursorPosX(25)
+								if imgui.Checkbox(u8'Обход Античита/тп', settings_ObhodAC) then 
+									config.Settings.Obhod_AC = settings_ObhodAC.v
+									inicfg.save(config)
+								end
 							
 							imgui.EndChild()
 						end
@@ -1242,9 +1250,11 @@ end
 --end
 
 function sampev.onSendPlayerSync(data)
-	if getSurfingObject() ~= -1 then
-        data.surfingVehicleId = LastObj
-    end
+	if settings_ObhodAC.v then
+		if getSurfingObject() ~= -1 then
+			data.surfingVehicleId = LastObj
+		end
+	end
 	--sampAddChatMessage("specialAction:" .. data.specialAction .. " animationId:" .. data.animationId .. " animationFlags:" .. data.animationFlags, -1)
 	if fermaYdobrenie then
 		data.specialAction = 0
