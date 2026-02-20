@@ -37,7 +37,6 @@ local main_window_state = imgui.ImBool(false)
 	--Легит
 		local fishing_window_state = imgui.ImBool(false)
 		local ohota_window_state = imgui.ImBool(false)
-		local halloween_window_state = imgui.ImBool(false)
 		local diving_window_state = imgui.ImBool(false)
 		local pilot_window_state = imgui.ImBool(false)
 		
@@ -61,40 +60,17 @@ local main_window_state = imgui.ImBool(false)
 		local legit_PilotAutoSkipTable = imgui.ImBool(false)
 		local legit_whDiving = imgui.ImBool(false)
 		local legit_whDiving_traser = imgui.ImBool(false)
-
-		--Угон машин, гм
+		
+	--Угон машин, гм
 		local rage_ygonAvto = imgui.ImBool(false)
 		local fun_gm_window_state = imgui.ImBool(false)
 		local fun_gm = imgui.ImBool(false)
 		local fun_gm1 = imgui.ImBool(false)
 		
-		--Телепорт атп
-		local fun_TpOnCoord_TPshim = false
-		local fun_TpOnCoord_syncPacketCount = 0
-		local fun_TpOnCoord_tpWait = 1100
-		local fun_TpOnCoord_tpTime
-		local fun_teleport_window_state = imgui.ImBool(false)
-		local LastObj = -1
-		local LastObjDistance = math.huge
-		
-	--Боты
-		local ferma1TpPerenos = false
-		local ferma2TpPerenos = false
-		local fermaTpVspah = false
-		local fermaYdobrenie = false
-		local fermaSbor = false
-
-		local fermaCheckpointPosX = 0.0
-		local fermaCheckpointPosY = 0.0
-		local fermaCheckpointPosZ = 0.0
 	--Настройки
 		local settings_ActivationInsert = imgui.ImBool(false)
 		local settings_AutoY = imgui.ImBool(false)
 		local settings_AutoY_clicker = false
-		local settings_ObhodAC = imgui.ImBool(false)
-		
-	--Хеллоуин
-		local legit_halloween_sendListovka = imgui.ImBool(false)
 
 --размер шрифта
 	local headsize = nil
@@ -113,8 +89,7 @@ local config = inicfg.load({
   },
   Settings = {
 	ActivationInsert=false,
-	AutoY=false,
-	Obhod_AC=false
+	AutoY=false
   }
 })
 local AutoLoginStatus = imgui.ImBool(false)
@@ -122,15 +97,14 @@ AutoLoginStatus.v = config.AutoLogin.AutoLoginStatus
 autologin_buffer.v = tostring(config.AutoLogin.Password)
 settings_ActivationInsert.v = config.Settings.ActivationInsert
 settings_AutoY.v = config.Settings.AutoY
-settings_ObhodAC.v = config.Settings.Obhod_AC
 
 -- Update
 local dlstatus = require('moonloader').download_status
 
 update_state = false
 
-local script_vers = 166
-local script_vers_text = "1.66"
+local script_vers = 170
+local script_vers_text = "1.70"
 
 local update_url = "https://github.com/Lomtik655/SlivsMenu_for_RadmirRP/raw/refs/heads/main/update.ini"
 local update_path = getWorkingDirectory() .. "/radmirSlivsMenu.ini"
@@ -169,111 +143,9 @@ function main()
 		--thread = lua_thread.create_suspended(thread_func) | thread:run() - выполнить
 	fishing_spamAlt_thread = lua_thread.create_suspended(fishing_spamAlt_thread_function)
 	legit_autoTakeDuck_thread = lua_thread.create_suspended(legit_autoTakeDuck_thread_function)
-	ferma1TpPerenos_thread = lua_thread.create_suspended(ferma1TpPerenos_thread_function)
-    ferma2TpPerenos_thread = lua_thread.create_suspended(ferma2TpPerenos_thread_function)
-	fermaTpVspah_thread = lua_thread.create_suspended(fermaTpVspah_thread_function)
-	fermaYdobrenie_thread = lua_thread.create_suspended(fermaYdobrenie_thread_function)
-	fermaSbor_thread = lua_thread.create_suspended(fermaSbor_thread_function)
 	
 	-- Команды
 	sampRegisterChatCommand("sm", imgui_main_window_state)
-	sampRegisterChatCommand("rtp", function()
-		local x, y, z
-		--Ищем корды в памяти
-		modulehandle = getModuleHandle("clientside.dll")
-		fulladr = mem.getint32(modulehandle + 0x431110)
-		ptr = '0x'.. string.format("%x", fulladr) --получили куда указывает указатель
-
-		x = mem.getfloat(ptr + 0x10) --добавили к найденной памяти указателя оффсет
-		y = mem.getfloat(ptr + 0x14)
-		z = 1000.0
-		z = getGroundZFor3dCoord(x,y,z)
-
-		
-		--sampAddChatMessage("x:" .. x .. " y:" .. y, -1)
-		if isCharInAnyCar(PLAYER_PED) then
-			fun_TpOnCoord_syncPacketCount=0
-			fun_TpOnCoord_TPshim = true
-			fun_TpOnCoord_tpTime=os.clock()
-			moveToBlip(x,y,z+15)
-		else
-			local data = samp_create_sync_data("player")
-			data.position = {x, y, z}
-			data.surfingVehicleId = LastObj
-			data.send()
-			setCharCoordinates(PLAYER_PED, x,y,z)
-		end
-	end)
-	sampRegisterChatCommand("rtpc", function(arg)
-		local carHandle
-		local xStr, yStr, zStr = string.match(arg, "(.+) (.+) (.+)")
-		local x, y, z
-		if xStr == nil or xStr == "" then
-			sampAddChatMessage("{c300ff}ATP/MTP by L.team: {ffffff}Введены не все корды, надо: x y z", -1)
-		else
-			x = tonumber(xStr); y = tonumber(yStr); z = tonumber(zStr);
-			fun_TpOnCoord_syncPacketCount=0
-			fun_TpOnCoord_TPshim = true
-			fun_TpOnCoord_tpTime=os.clock()
-			moveToBlip(x,y,z)
-		end
-	end)
-	
-	sampRegisterChatCommand("ferma_per1", function(arg)
-		ferma1TpPerenos = not ferma1TpPerenos
-		if ferma1TpPerenos then
-			sampAddChatMessage("Начинаем тепаться", -1)
-			ferma1TpPerenos_thread:run()
-		else
-			sampAddChatMessage("Дотепываемся последний раз", -1)
-		end
-	end)
-	sampRegisterChatCommand("ferma_per2", function(arg)
-		ferma2TpPerenos = not ferma2TpPerenos
-		if ferma2TpPerenos then
-			sampAddChatMessage("Начинаем тепаться", -1)
-			ferma2TpPerenos_thread:run()
-		else
-			sampAddChatMessage("Дотепываемся последний раз", -1)
-		end
-	end)
-	sampRegisterChatCommand("ferma_vspah", function(arg)
-		fermaTpVspah = not fermaTpVspah
-		if fermaTpVspah then
-			sampAddChatMessage("Начинаем тепаться", -1)
-			fermaTpVspah_thread:run()
-		else
-			sampAddChatMessage("Дотепываемся последний раз", -1)
-		end
-	end)
-	sampRegisterChatCommand("ferma_grabmetka", function()
-		local x, y, z = getCharCoordinates(PLAYER_PED)
-		local data = samp_create_sync_data("player")
-		data.position = {fermaCheckpointPosX, fermaCheckpointPosY, fermaCheckpointPosZ} -- тп на мельницу
-		data.surfingVehicleId = LastObj
-		data.send()
-		data.position = {x, y, z}
-		data.surfingVehicleId = LastObj
-		data.send()
-	end)
-	sampRegisterChatCommand("ferma_ydobrenie", function()
-		fermaYdobrenie = not fermaYdobrenie
-		if fermaYdobrenie then
-			sampAddChatMessage("Начинаем удобрять беспалевно", -1)
-			fermaYdobrenie_thread:run()
-		else
-			sampAddChatMessage("Удобряем последний раз", -1)
-		end
-	end)
-	sampRegisterChatCommand("ferma_sbor", function(arg)
-		fermaSbor = not fermaSbor
-		if fermaSbor then
-			sampAddChatMessage("Начинаем тепаться", -1)
-			fermaSbor_thread:run()
-		else
-			sampAddChatMessage("Дотепываемся последний раз", -1)
-		end
-	end)
 	
 	--Фонты
 	font = renderCreateFont('Verdana', 10, 9)
@@ -286,6 +158,7 @@ function main()
 	imgui.Process = false
     while true do
         wait(0)
+		
 		-- Обновление скрипта
 		if update_state then
 			downloadUrlToFile(script_url, script_path, function(id, status)
@@ -454,10 +327,6 @@ function main()
 				end
 			end
 			
-			if fun_TpOnCoord_TPshim then
-				renderFontDrawText(font, "Teleporting", sw/2-15, sh/2+50, 0xFFFFFFFF)
-			end
-			
 			--Вх на дайвинг
 			if legit_whDiving.v then
 				for _, v in pairs(getAllObjects()) do
@@ -481,43 +350,6 @@ function main()
 				end
 			end
 			
-			
-			--Хеллоуин
-			if legit_halloween_sendListovka.v then
-				if isKeyDown(keys.VK_RBUTTON) and wasKeyPressed(keys.VK_B) then
-					local bs = raknetNewBitStream()
-					local MyPacket = {215, 2, 0, 0, 0, 0, 0, 19, 0, 0, 0, 77, 101, 110, 117, 73, 110, 116, 95, 79, 110, 80, 108, 97, 121, 101, 114, 75, 101, 121, 0, 0, 0, 0}
-					for i=1, #MyPacket do
-						raknetBitStreamWriteInt8(bs, MyPacket[i])
-					end
-					raknetSendBitStream(bs) -- отправляем пакет
-					raknetDeleteBitStream(bs) -- удаляем пакет
-					
-					bs = raknetNewBitStream()
-					MyPacket = {215, 2, 0, 0, 0, 0, 0, 25, 0, 0, 0, 77, 101, 110, 117, 73, 110, 116, 95, 79, 110, 80, 108, 97, 121, 101, 114, 67, 108, 105, 99, 107, 73, 116, 101, 109, 4, 0, 0, 0, 100, 1, 0, 0, 0, 100, 1, 0, 0, 0}
-					for i=1, #MyPacket do
-						raknetBitStreamWriteInt8(bs, MyPacket[i])
-					end
-					raknetSendBitStream(bs) -- отправляем пакет
-					raknetDeleteBitStream(bs) -- удаляем пакет
-					
-					bs = raknetNewBitStream()
-					MyPacket = {215, 2, 0, 0, 0, 0, 0, 25, 0, 0, 0, 77, 101, 110, 117, 73, 110, 116, 95, 79, 110, 80, 108, 97, 121, 101, 114, 67, 108, 105, 99, 107, 73, 116, 101, 109, 4, 0, 0, 0, 100, 58, 0, 0, 0, 100, 0, 0, 0, 0}
-					for i=1, #MyPacket do
-						raknetBitStreamWriteInt8(bs, MyPacket[i])
-					end
-					raknetSendBitStream(bs) -- отправляем пакет
-					raknetDeleteBitStream(bs) -- удаляем пакет
-					
-					bs = raknetNewBitStream()
-					MyPacket = {215, 2, 0, 0, 0, 0, 0, 24, 0, 0, 0, 77, 101, 110, 117, 73, 110, 116, 95, 79, 110, 67, 108, 111, 115, 101, 73, 110, 116, 101, 114, 102, 97, 99, 101, 2, 0, 0, 0, 100, 0, 0, 0, 0}
-					for i=1, #MyPacket do
-						raknetBitStreamWriteInt8(bs, MyPacket[i])
-					end
-					raknetSendBitStream(bs) -- отправляем пакет
-					raknetDeleteBitStream(bs) -- удаляем пакет
-				end
-			end
 			
 			
 		--Активация на INSERT
@@ -630,10 +462,6 @@ function imgui.OnDrawFrame()
 							if imgui.Button(u8"Пилот", imgui.ImVec2(202, 50)) then
 								pilot_window_state.v = true
 							end
-							imgui.SetCursorPosX(25)
-							if imgui.Button(u8"Хеллоуин", imgui.ImVec2(202, 50)) then
-								halloween_window_state.v = true
-							end
 							imgui.PopFont()
 							
 							--Авто-логин
@@ -658,8 +486,7 @@ function imgui.OnDrawFrame()
 									fun_gm_window_state.v = true
 								end
 								
-								imgui.Text(u8"Ферма: /ferma_per1(бусаево) /ferma_per2(батырево) /ferma_vspah(трактор)")
-								imgui.Text(u8"      /ferma_grabmetka(ворует метку)\n      /ferma_ydobrenie(удобрение)\n      /ferma_sbor(сбор)")
+								
 							-- Починка авто
 								imgui.SameLine()
 								imgui.SetCursorPosX(312)
@@ -689,11 +516,6 @@ function imgui.OnDrawFrame()
 							imgui.SetCursorPosX(25)	
 								if imgui.Checkbox(u8'Авто Y', settings_AutoY) then 
 									config.Settings.AutoY = settings_AutoY.v
-									inicfg.save(config)
-								end
-							imgui.SetCursorPosX(25)
-								if imgui.Checkbox(u8'Обход Античита/тп', settings_ObhodAC) then 
-									config.Settings.Obhod_AC = settings_ObhodAC.v
 									inicfg.save(config)
 								end
 							
@@ -879,20 +701,6 @@ function imgui.OnDrawFrame()
 		imgui.Begin('SlivsMenu for RadmirRP - Pilot', pilot_window_state, imgui.WindowFlags.NoResize)
 
 		if imgui.Checkbox(u8'Пилот Авто-скип таблички', legit_PilotAutoSkipTable) then end
-
-		imgui.End()
-	end
-	
-	if halloween_window_state.v then
-		menus_style()
-		-- Настройки окна
-		imgui.SetNextWindowSize(imgui.ImVec2(450, 250), imgui.Cond.FirstUseEver)
-		imgui.SetNextWindowPos(imgui.ImVec2(sw / 2, sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-
-		-- Вывод окна
-		imgui.Begin('SlivsMenu for RadmirRP - Halloween', halloween_window_state, imgui.WindowFlags.NoResize)
-
-		if imgui.Checkbox(u8'Выдать листовку ПКМ+B (R,J перестанет работать)', legit_halloween_sendListovka) then end
 
 		imgui.End()
 	end
@@ -1195,12 +1003,6 @@ function onReceivePacket(id, bs)
 				raknetDeleteBitStream(bs) -- удаляем пакет
 			end
 			
-			if legit_halloween_sendListovka.v then
-				if (bitstreamtext == "PlayerInteraction") or (string.find(bitstreamtext, "interface('PlayerInteraction').onServerResponse", 1, true)) then
-					return false
-				end
-			end
-			
 			-- 727/512/0/1/120/window.addDialogInQueue('[0,0,"Auaa?eoa aaenoaea","","Aa","Iao",0,0]', "Au oioeoa caeii?eou ?aaioo?", 0)
 			if legit_PilotAutoSkipTable.v then
 				if string.find(bitstreamtext, "window.addDialogInQueue('[0,0,", 1, true) then
@@ -1243,26 +1045,6 @@ function onReceivePacket(id, bs)
 			end
 			
 		end
-	end
-end
---function onSendPacket(id, bitStream, priority, reliability, orderingChannel)
---    if fun_TpOnCoord_TPshim and not isCharInAnyCar(PLAYER_PED) then id = 159 return false end
---end
-
-function sampev.onSendPlayerSync(data)
-	if settings_ObhodAC.v then
-		if getSurfingObject() ~= -1 then
-			data.surfingVehicleId = LastObj
-		end
-	end
-	--sampAddChatMessage("specialAction:" .. data.specialAction .. " animationId:" .. data.animationId .. " animationFlags:" .. data.animationFlags, -1)
-	if fermaYdobrenie then
-		data.specialAction = 0
-		data.animationId = 1189
-		data.animationFlags = 32772
-	end
-	if fun_TpOnCoord_TPshim and not isCharInAnyCar(PLAYER_PED) then
-		return false
 	end
 end
 
@@ -1455,332 +1237,4 @@ function targetAtCoords(x, y, z)
 	--renderFontDrawText(font, string.format('1: %0.4f  2: %0.4f', az-fz, fx-ax), sw/2-50, sh/2-28, 0xFFFFFFFF)
 	--renderFontDrawText(font, string.format('1: %0.4f  2: %0.4f', cx, x), sw/2-50, sh/2-40, 0xFFFFFFFF)
     setCameraPositionUnfixed(az - fz, fx - ax)
-end
-
-function ferma1TpPerenos_thread_function()
-	while ferma1TpPerenos do
-		local x, y, z = getCharCoordinates(PLAYER_PED)
-		local data = samp_create_sync_data("player")
-		data.position = {-1074.3, -1026.2, 47} -- тп на мельницу
-		data.surfingVehicleId = LastObj
-		data.send()
-		data.position = {x, y, z}
-		data.surfingVehicleId = LastObj
-		data.send()
-
-		wait(math.random(5000, 6000))
-		
-		x, y, z = getCharCoordinates(PLAYER_PED)
-		data = samp_create_sync_data("player")
-		data.position = {-1121.1, -828, 51} -- тп на сдачу
-		data.surfingVehicleId = LastObj
-		data.send()
-		data.position = {x, y, z}
-		data.surfingVehicleId = LastObj
-		data.send()
-
-		wait(math.random(5000, 6000))
-	end
-	sampAddChatMessage("Доделали", -1)
-end
-
-function ferma2TpPerenos_thread_function()
-	while ferma2TpPerenos do
-		local x, y, z = getCharCoordinates(PLAYER_PED)
-		local data = samp_create_sync_data("player")
-		data.position = {1556.2, 651.4, 15} -- тп на мельницу
-		data.surfingVehicleId = LastObj
-		data.send()
-		data.position = {x, y, z}
-		data.surfingVehicleId = LastObj
-		data.send()
-		
-		wait(math.random(4000, 5000))
-		
-		x, y, z = getCharCoordinates(PLAYER_PED)
-		data = samp_create_sync_data("player")
-		data.position = {1657.7, 692.3, 15.5} -- тп на сдачу
-		data.surfingVehicleId = LastObj
-		data.send()
-		data.position = {x, y, z}
-		data.surfingVehicleId = LastObj
-		data.send()
-		
-		wait(math.random(4000, 5000))
-	end
-	sampAddChatMessage("Доделали", -1)
-end
-
-function fermaTpVspah_thread_function()
-	while fermaTpVspah do
-	
-		fun_TpOnCoord_syncPacketCount=0
-		fun_TpOnCoord_TPshim = true
-		moveTudaObratno(fermaCheckpointPosX, fermaCheckpointPosY, fermaCheckpointPosZ) -- тп на метку
-		while fun_TpOnCoord_TPshim do
-			wait(100)
-		end
-		
-		wait(5000)
-	end
-	sampAddChatMessage("Доделали", -1)
-end
-
-function fermaYdobrenie_thread_function()
-	while fermaYdobrenie do
-		local x, y, z = getCharCoordinates(PLAYER_PED)
-		local data = samp_create_sync_data("player")
-		data.position = {fermaCheckpointPosX, fermaCheckpointPosY, fermaCheckpointPosZ}
-		data.surfingVehicleId = LastObj
-		data.send()
-		data.position = {x, y, z}
-		data.surfingVehicleId = LastObj
-		data.send()
-		
-		wait(math.random(5000, 20000))
-	end
-	sampAddChatMessage("Доделали", -1)
-end
-
-function fermaSbor_thread_function()
-	while fermaSbor do
-		local x, y, z = getCharCoordinates(PLAYER_PED)
-		local data = samp_create_sync_data("player")
-		data.position = {fermaCheckpointPosX, fermaCheckpointPosY, fermaCheckpointPosZ}
-		data.surfingVehicleId = LastObj
-		data.send()
-		data.position = {x, y, z}
-		data.surfingVehicleId = LastObj
-		data.send()
-		
-		wait(math.random(15000, 30000))
-		
-		local x, y, z = getCharCoordinates(PLAYER_PED)
-		local data = samp_create_sync_data("player")
-		data.position = {fermaCheckpointPosX, fermaCheckpointPosY, fermaCheckpointPosZ}
-		data.surfingVehicleId = LastObj
-		data.send()
-		data.position = {x, y, z}
-		data.surfingVehicleId = LastObj
-		data.send()
-		
-		wait(math.random(10000, 20000))
-	end
-	sampAddChatMessage("Доделали", -1)
-end
-
-function sampev.onSetCheckpoint(position, radius)
-	if (radius == 1) or (radius == 2.5) then
-		fermaCheckpointPosX = position.x
-		fermaCheckpointPosY = position.y
-		fermaCheckpointPosZ = position.z
-		--sampAddChatMessage(string.format("X:%0.3f |Y:%0.3f |Z:%0.3f", fermaCheckpointPosX, fermaCheckpointPosY, fermaCheckpointPosZ), -1)
-	end
-end
-
-function getSurfingObject()
-    local PLAYER_POS = {getCharCoordinates(PLAYER_PED)}
-    local closestObject = nil
-    local closestDistance = math.huge
-    for objects = 1, 1024 do
-        local result, handle = findAllRandomObjectsInSphere(PLAYER_POS[1], PLAYER_POS[2], PLAYER_POS[3], math.huge, true)
-        if result and doesObjectExist(handle) then
-            local coordinates_res, x, y, z = getObjectCoordinates(handle)
-            local objectModel = getObjectModel(handle)
-            if objectModel == 16877 or objectModel == 10476 or objectModel == 15874 or objectModel == 16955 or objectModel == 16512 or objectModel == 17163 or objectModel == 10440 or objectModel == 10441 or objectModel == 10442 or objectModel == 10443 or objectModel == 10444 or objectModel == 10445 or objectModel == 10446 or objectModel == 10447 or objectModel == 13946 or objectModel == 15738 or objectModel == 16229 or objectModel == 17637 then
-                local CURRENT_DISTANCE = getDistanceBetweenCoords3d(PLAYER_POS[1], PLAYER_POS[2], PLAYER_POS[3], x, y, z)
-
-                if CURRENT_DISTANCE < closestDistance then
-                    closestObject = handle
-                    closestDistance = CURRENT_DISTANCE
-                end
-            end
-        end
-    end
-
-    if closestObject and closestDistance <= LastObjDistance then
-        LastObj = sampGetObjectSampIdByHandle(closestObject) + 2000
-		--sampAddChatMessage("объект", -1)
-    end
-
-    return LastObj or -1
-end
---Телепорт атп/мтп
-function moveToBlip(blipX, blipY, blipZ)
-	local playerX, playerY, playerZ = getCharCoordinates(PLAYER_PED)
-	local isCar = isCharInAnyCar(PLAYER_PED)
-	local PosDelay
-	if isCar then
-		PosDelay = 5 --делей если в машине
-	else
-		PosDelay = 500 --делей если пешком
-	end
-	lua_thread.create(function()
-		while fun_TpOnCoord_TPshim do
-			local success, err = pcall(function()
-				local moveX, moveY, moveZ = calculateNextStep(playerX, playerY, playerZ, blipX, blipY, blipZ, PosDelay)
-				playerX, playerY, playerZ = playerX + moveX, playerY + moveY, playerZ + moveZ
-				
-				syncMovement(playerX, playerY, playerZ, isCar)
-				fun_TpOnCoord_syncPacketCount=fun_TpOnCoord_syncPacketCount + 1
-				
-				if calculateDistance(playerX, playerY, blipX, blipY) < PosDelay then
-					local whatTime=os.clock()-fun_TpOnCoord_tpTime
-					setCharCoordinates(PLAYER_PED, blipX, blipY, blipZ)
-					wait(100)
-					fun_TpOnCoord_TPshim=false
-					sampAddChatMessage("{c300ff}ATP/MTP by L.team: {ffffff}Тепнули вас сер за " .. string.format("%0.2f", whatTime) .. " секунд", -1);
-					
-				end
-
-				if fun_TpOnCoord_syncPacketCount >= 450 then --OnPacket = 480
-					fun_TpOnCoord_syncPacketCount=0
-					--sampAddChatMessage("Ждём " .. fun_TpOnCoord_tpWait .. "мс", -1)
-					if isCar then
-						wait(fun_TpOnCoord_tpWait)
-					else
-						wait(1600)
-					end
-				end
-			end)
-
-			if not success then
-				fun_TpOnCoord_TPshim=false
-			end
-		end
-	end)
-end
-function moveTudaObratno(blipX, blipY, blipZ)
-	local playerX, playerY, playerZ = getCharCoordinates(PLAYER_PED)
-	local myPosX, myPosY, myPosZ = getCharCoordinates(PLAYER_PED)
-	local isCar = isCharInAnyCar(PLAYER_PED)
-	local tuda = true
-	local PosDelay
-	if isCar then
-		PosDelay = 5 --делей если в машине
-	else
-		PosDelay = 1 --делей если пешком
-	end
-	lua_thread.create(function()
-		while fun_TpOnCoord_TPshim do
-			local success, err = pcall(function()
-				if tuda then
-					local moveX, moveY, moveZ = calculateNextStep(playerX, playerY, playerZ, blipX, blipY, blipZ, PosDelay)
-					playerX, playerY, playerZ = playerX + moveX, playerY + moveY, playerZ + moveZ
-					syncMovement(playerX, playerY, playerZ, isCar)
-					fun_TpOnCoord_syncPacketCount=fun_TpOnCoord_syncPacketCount + 1
-				else
-					local moveX, moveY, moveZ = calculateNextStep(playerX, playerY, playerZ, myPosX, myPosY, myPosZ, PosDelay)
-					playerX, playerY, playerZ = playerX + moveX, playerY + moveY, playerZ + moveZ
-					syncMovement(playerX, playerY, playerZ, isCar)
-					fun_TpOnCoord_syncPacketCount=fun_TpOnCoord_syncPacketCount + 1
-				end
-				
-				if calculateDistance(playerX, playerY, blipX, blipY) < PosDelay and tuda then
-					syncMovement(blipX, blipY, blipZ, isCar)
-					fun_TpOnCoord_syncPacketCount=fun_TpOnCoord_syncPacketCount + 1
-					tuda = false
-				end
-				
-				if calculateDistance(playerX, playerY, myPosX, myPosY) < PosDelay and not tuda then
-					--sampAddChatMessage(myPosX .. "|" .. myPosY .. "|" .. myPosZ, -1)
-					if isCar then
-						setCarCoordinates(getCarModel(storeCarCharIsInNoSave(PLAYER_PED)), myPosX, myPosY, myPosZ)
-					else
-						local data = samp_create_sync_data("player")
-						data.health = getCharHealth(PLAYER_PED)
-						data.specialAction = 0
-						data.animationId = 1189 -- просто стоим на месте
-						data.send()
-						setCharCoordinates(PLAYER_PED, myPosX, myPosY, myPosZ-1)
-					end
-					wait(100)
-					fun_TpOnCoord_TPshim=false
-				end
-				
-				if fun_TpOnCoord_syncPacketCount >= 450 then --OnPacket = 480
-					fun_TpOnCoord_syncPacketCount=0
-					--sampAddChatMessage("Ждём " .. fun_TpOnCoord_tpWait .. "мс", -1)
-					if isCar then
-						wait(fun_TpOnCoord_tpWait)
-					else
-						wait(1000)
-					end
-				end
-				
-			end)
-
-			if not success then
-				fun_TpOnCoord_TPshim=false
-			end
-		end
-	end)
-end
-function calculateNextStep(x, y, z, targetX, targetY, targetZ, speed)
-    local deltaX, deltaY, deltaZ = targetX - x, targetY - y, targetZ - z
-    local dist = math.sqrt(deltaX^2 + deltaY^2 + deltaZ^2)
-    if dist == 0 then return 0, 0, 0 end
-    local scale = speed / dist
-    return deltaX * scale, deltaY * scale, deltaZ * scale
-end
-function syncMovement(x, y, z, isCar)
-	local randomizes = tonumber("0.0000" .. math.random(9))
-	--setCharCoordinates(PLAYER_PED, x+randomizes, y+randomizes,z+randomizes)
-	if isCar then
-		local data = samp_create_sync_data("vehicle")
-		data.position={x+randomizes, y+randomizes,z+randomizes}
-		data.send()
-	else
-		local data = samp_create_sync_data("player")
-		data.position={x+randomizes, y+randomizes,z+randomizes}
-		data.surfingVehicleId = LastObj
-		data.health = 1/0
-		data.keysData = 0
-		data.specialAction = 4
-		data.animationId = 1018
-		data.animationFlags = 12211
-		data.send()
-	end
-end
-function calculateDistance(x,y,tpX,tpY)
-	return math.sqrt(((tpX-x)^2) + ((tpY-y)^2))
-end
-function samp_create_sync_data(sync_type, copy_from_player)
-	local ffi, sampfuncs, raknet=require("ffi"),require("sampfuncs"),require("samp.raknet")
-	require("samp.synchronization")
-
-	local sync_hooks={
-		player={"PlayerSyncData",raknet.PACKET.PLAYER_SYNC,sampStorePlayerOnfootData},
-		vehicle={"VehicleSyncData",raknet.PACKET.VEHICLE_SYNC,sampStorePlayerIncarData},
-		passenger={"PassengerSyncData",raknet.PACKET.PASSENGER_SYNC,sampStorePlayerPassengerData},
-		aim={"AimSyncData",raknet.PACKET.AIM_SYNC,sampStorePlayerAimData},
-		trailer={"TrailerSyncData",raknet.PACKET.TRAILER_SYNC,sampStorePlayerTrailerData},
-		unoccupied={"UnoccupiedSyncData",raknet.PACKET.UNOCCUPIED_SYNC,nil},
-		bullet={"BulletSyncData",raknet.PACKET.BULLET_SYNC,nil},
-		spectator={"SpectatorSyncData",raknet.PACKET.SPECTATOR_SYNC,nil}
-	}
-	local sync_info, data_type = sync_hooks[sync_type], "struct " .. sync_hooks[sync_type][1]
-	local data = ffi.new(data_type,{})
-	local raw_data_ptr = tonumber(ffi.cast("uintptr_t",ffi.new(data_type .. "*" ,data)));
-
-	if copy_from_player ~= false then
-        local copy_func = sync_info[3]
-        if copy_func then
-            local _, player_id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-            copy_func(player_id, raw_data_ptr)
-        end
-    end
-
-	local func_send=function()
-		local bs=raknetNewBitStream()
-		raknetBitStreamWriteInt8(bs,sync_info[2])
-		raknetBitStreamWriteBuffer(bs,raw_data_ptr,ffi.sizeof(data))
-		raknetSendBitStreamEx(bs,sampfuncs.HIGH_PRIORITY,sampfuncs.UNRELIABLE_SEQUENCED, 1)
-		raknetDeleteBitStream(bs)
-	end
-
-	return setmetatable({send=func_send},{
-		__index=function(t, index) return data[index] end,
-		__newindex=function(t, index, value) data[index]=value end
-	})
 end
